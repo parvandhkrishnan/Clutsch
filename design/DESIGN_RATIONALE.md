@@ -1,7 +1,7 @@
-# PriorityFlow Design Rationale
+# Clutsch Design Rationale
 
 ## Overview
-PriorityFlow is designed to minimize cognitive load for busy professionals by centralizing communications and highlighting the most critical actions. The design focuses on clarity, urgency visualization, and actionable insights.
+Clutsch is designed to minimize cognitive load for busy professionals by centralizing communications and highlighting the most critical actions. The design focuses on clarity, urgency visualization, and actionable insights.
 
 ## Key Design Principles
 
@@ -55,7 +55,7 @@ PriorityFlow is designed to minimize cognitive load for busy professionals by ce
 - `enterprise-audit-logs.png`: Administrative audit logs for tracking organizational changes.
 - `advanced-tuning-engine.png`: Advanced user controls for Semantic Weighting and Contextual Scaling.
 - `custom-integration-framework.png`: UI for building and configuring custom third-party connectors.
-- `data-mapping-normalizer.png`: Tool for mapping custom data fields to the PriorityFlow schema.
+- `data-mapping-normalizer.png`: Tool for mapping custom data fields to the Clutsch schema.
 
 ## Marketing Landing Page Design
 The landing page is designed to convert high-level professionals by focusing on the transition from "chaos" to "focus".
@@ -121,7 +121,7 @@ For detailed findings, see `RESEARCH_NOTES.md`.
 
 ### 1. KPI Visualization
 - **Focus**: Actionable metrics for managers to measure team productivity and responsiveness.
-- **Time to Action**: A primary metric showing the average time elapsed between receiving a high-priority item and the first meaningful action (Reply, Resolve, Delegate). The dashboard highlights the reduction in this time post-PriorityFlow.
+- **Time to Action**: A primary metric showing the average time elapsed between receiving a high-priority item and the first meaningful action (Reply, Resolve, Delegate). The dashboard highlights the reduction in this time post-Clutsch.
 - **Team Focus Score**: A proprietary metric based on how effectively the team is addressing high-priority items compared to low-priority distractions.
 - **Visuals**: Large, high-contrast KPI cards with trend indicators and sparklines.
 
@@ -167,13 +167,13 @@ For detailed findings, see `RESEARCH_NOTES.md`.
 ### 1. Cohesive Support
 - **Goal:** Provide a self-service resource that feels like an extension of the product.
 - **Experience:** Clean search-first interface with categorized documentation for quick troubleshooting.
-- **Brand Alignment:** Maintains the dark mode glassmorphism theme to keep the user in the "PriorityFlow environment" even when seeking help.
+- **Brand Alignment:** Maintains the dark mode glassmorphism theme to keep the user in the "Clutsch environment" even when seeking help.
 - **Mockup:** `help-center-mockup.png` shows the welcoming, organized grid of help categories.
 
 ## Enterprise Administration & User Management
 
 ### 1. Organizational Governance
-- **Goal:** Provide administrators with complete control over their organization's PriorityFlow environment.
+- **Goal:** Provide administrators with complete control over their organization's Clutsch environment.
 - **User Directory:** A centralized list for managing seats, invitations, and role assignments (Admin, Manager, Member).
 - **Mockup:** `enterprise-user-management.png` features the high-density directory table and role management controls.
 
@@ -216,12 +216,12 @@ For detailed findings, see `RESEARCH_NOTES.md`.
 ## Custom Integration Framework (Phase 3)
 
 ### 1. Developer-Friendly Connector Builder
-- **Goal:** Empower Enterprise admins to connect proprietary or niche APIs to PriorityFlow.
+- **Goal:** Empower Enterprise admins to connect proprietary or niche APIs to Clutsch.
 - **Workflow:** A multi-step builder for defining endpoints, authentication (including OAuth2 and API Keys), and polling intervals.
 - **Mockup:** `custom-integration-framework.png` demonstrates the technical yet accessible builder interface.
 
 ### 2. Schema Mapping & Normalization
-- **Concept:** Every external source has different field names. This tool standardizes them into the PriorityFlow schema.
+- **Concept:** Every external source has different field names. This tool standardizes them into the Clutsch schema.
 - **Interaction:** Visual mapping of JSON source keys to destination fields (e.g., "subject" -> "Message Title").
 - **Smart Logic:** Admins can define "Urgency Triggers" within the mapping—for example, mapping a "Customer Tier" field so that "Enterprise" status automatically boosts an item's priority score.
 - **Mockup:** `data-mapping-normalizer.png` shows the side-by-side mapping and priority logic builder.
