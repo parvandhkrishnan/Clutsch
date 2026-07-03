@@ -232,3 +232,19 @@ For detailed findings, see `RESEARCH_NOTES.md`.
 - Ensure the color-coding is accessible (use icons or patterns in addition to color if possible).
 - Use WebSockets for real-time presence and feed updates in the Enterprise view.
 - Use a lightweight charting library (e.g., Recharts or Chart.js) for the analytics dashboard to maintain performance.
+
+## AI Priority Feedback UI
+
+### 1. Interactive Feedback Mechanisms
+- **Goal:** Provide a seamless, low-friction way for users to correct and tune AI-assigned priorities.
+- **Triage Feedback:** Direct, on-card feedback buttons (thumbs up "Correct" and thumbs down "Incorrect"). This avoids navigating away from the triage workflow.
+- **Adjustment Selector:** Clicking "Incorrect" triggers an elegant, contextual popover prompting the user for the correct action (e.g., "Should be Higher", "Should be Lower", or "Not Urgent").
+- **Manual Reordering (Drag and Drop):** Users can manually drag-and-drop items in their list to reorder them. The system intercepts these reordering events as implicit feedback to adjust scoring preferences.
+- **Mockup:** `ai-priority-feedback-widget.png` showcases the on-card thumbs-up/thumbs-down hover actions and the adjustment dropdown.
+
+### 2. Explainable AI Learning Feedback
+- **Goal:** Foster trust and confidence by showing the user that their actions directly influence and train the system.
+- **Dynamic Recalibration:** When feedback is submitted, the UI displays an active glowing confirmation animation and updates the "Why" tooltip in real-time, showing which weights (e.g., Sender Rank, Semantic Weight, Project Importance) were updated.
+- **Immediate Re-Scoring:** The priority score instantly updates on the card, and a subtle "AI Learning Confirmed" badge with weight adjustment indicators (+15% Sender Weight, etc.) highlights the active tuning.
+- **Mockup:** `ai-learning-confirmation.png` illustrates the updated "Why" tooltip card immediately following a user feedback submission, visually demonstrating the weight calibration.
+
