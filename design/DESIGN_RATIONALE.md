@@ -232,3 +232,57 @@ For detailed findings, see `RESEARCH_NOTES.md`.
 - Ensure the color-coding is accessible (use icons or patterns in addition to color if possible).
 - Use WebSockets for real-time presence and feed updates in the Enterprise view.
 - Use a lightweight charting library (e.g., Recharts or Chart.js) for the analytics dashboard to maintain performance.
+
+## AI Priority Feedback UI
+
+### 1. Interactive Feedback Mechanisms
+- **Goal:** Provide a seamless, low-friction way for users to correct and tune AI-assigned priorities.
+- **Triage Feedback:** Direct, on-card feedback buttons (thumbs up "Correct" and thumbs down "Incorrect"). This avoids navigating away from the triage workflow.
+- **Adjustment Selector:** Clicking "Incorrect" triggers an elegant, contextual popover prompting the user for the correct action (e.g., "Should be Higher", "Should be Lower", or "Not Urgent").
+- **Manual Reordering (Drag and Drop):** Users can manually drag-and-drop items in their list to reorder them. The system intercepts these reordering events as implicit feedback to adjust scoring preferences.
+- **Mockup:** `ai-priority-feedback-widget.png` showcases the on-card thumbs-up/thumbs-down hover actions and the adjustment dropdown.
+
+### 2. Explainable AI Learning Feedback
+- **Goal:** Foster trust and confidence by showing the user that their actions directly influence and train the system.
+- **Dynamic Recalibration:** When feedback is submitted, the UI displays an active glowing confirmation animation and updates the "Why" tooltip in real-time, showing which weights (e.g., Sender Rank, Semantic Weight, Project Importance) were updated.
+- **Immediate Re-Scoring:** The priority score instantly updates on the card, and a subtle "AI Learning Confirmed" badge with weight adjustment indicators (+15% Sender Weight, etc.) highlights the active tuning.
+- **Mockup:** `ai-learning-confirmation.png` illustrates the updated "Why" tooltip card immediately following a user feedback submission, visually demonstrating the weight calibration.
+
+## Premium Brand & Bento Grid Layout Overhaul (Redesign)
+
+### 1. Visual Identity & Premium Brand Overhaul
+- **Aesthetic Goal:** Replace the generic, template-like UI with a highly polished, bespoke brand identity inspired by cutting-edge tools like Linear, Raycast, and Arc Browser.
+- **Typography-First Design:** Employ **Satoshi** (or equivalent variable grotesques) for bold, high-density display headers. Large sizes are paired with small clean labels for dramatic scale. For data views, monospace fonts like **JetBrains Mono** are strictly enforced to lend a technical, precise feel.
+- **Color Redefinition:** Shift entirely away from generic SaaS blue. The system uses a cohesive premium dark mode backdrop built on deep charcoal (`#0A0A0F`), accentuated by **Electric Violet** (`#6C3BFF`) as the primary brand color, **Cyan** (`#00F0FF`) for focus details, and **Amber** (`#FFB800`) for priority warnings.
+- **Texture Overlay:** Implement a very subtle noise/grain layer atop flat surfaces to achieve a rich, tactile material feeling.
+
+### 2. Apple-Style Bento Grid Layout
+- **Asymmetric Grid Structure:** Transition the inbox dashboard away from standard vertical lists and split layouts. Incorporate a modular bento grid structure consisting of varied, auto-fitting card blocks (large critical cards, wide context cards, and small status tiles).
+- **Cognitive Hierarchy:** Large cards house high-priority alerts with full previews, while low-priority and informational items are cleanly compacted into small square blocks.
+- **Card Materiality:** Cards use heavy rounded corners (16px+), glassmorphic transparency gradients, and deep drop shadows to suggest layer stacking.
+- **Mockup:** `dashboard-bento-overhaul.png` displays the complete responsive bento dashboard layout with diverse tile configurations.
+
+### 3. Ambient Priority Orbs
+- **Score Representation:** Abandon flat text badges or generic circular progress gauges. Instead, priorities are visualized inside a volumetric **glowing ambient orb**.
+- **Chromodynamics:** The orb's core color is dynamically mapped to a glowing color gradient corresponding to score brackets: low priority (`violet`) → medium (`cyan`) → high (`amber`) → critical (`magenta/pink`).
+- **Gently Pulsing Behavior:** Critical items (>90 score) trigger an active glow pulse animation to establish urgency.
+- **Mockup:** `priority-orb-widget.png` captures a close-up detail of the glowing priority orb in action.
+
+### 4. Navigation & Collapsible Sidebar
+- **Sleek, Collapsible Design:** Create an icon-forward collapsible sidebar to prioritize screen real estate for the core bento dashboard.
+- **Indicator Glimmers:** Minimalist SVG navigation icons are coupled with subtle glowing notification glimmers (pink/violet orbs) indicating active priority queues in other views.
+- **Active State:** Selected items are wrapped in a soft Electric Violet background container and flagged with a vertical Cyan accent strip.
+- **Mockup:** `collapsible-sidebar.png` illustrates the sidebar menu in its fully polished state.
+
+### 5. Priority Heat Map for Empty States
+- **Meaningful Empty States:** Replace standard "Inbox Zero" blank screens with a gorgeous, data-rich **Priority Heat Map**.
+- **Intensity Mapping:** A horizontal grid mapping communication density across sources (Email, Slack, Jira) over a 24-hour timeline, color-coded with the brand's gradient accents to reveal peak activity times.
+- **Predictive Callout:** A clear textual indicator highlights upcoming message loads: *"All Clear! Next peak expected around 2:00 PM."*
+- **Mockup:** `priority-heat-map.png` captures this functional and visually stunning empty state alternative.
+
+### 6. Admin & Tuning Redesign
+- **Bento Settings Panel:** Overhaul the advanced preferences and weight calibrators into neat, interactive settings cards.
+- **Interactive Calibrators:** Leverage premium glowing sliders and dynamic switches that give immediate graphical feedback on signal biases.
+- **Mockup:** `admin-tuning-redesign.png` depicts the refined settings directory.
+
+
