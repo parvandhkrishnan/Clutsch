@@ -64,8 +64,8 @@ const LandingPage = () => {
     <div className="landing-container">
       <nav className="landing-nav">
         <div className="logo">
-          <div className="logo-icon">P</div>
-          <span className="logo-text">PriorityFlow</span>
+          <div className="logo-icon" style={{ background: 'linear-gradient(135deg, #6C3BFF, #00F0FF)' }}>C</div>
+          <span className="logo-text text-display" style={{ fontWeight: 700, letterSpacing: '-0.03em' }}>Clutsch</span>
         </div>
         <div className="nav-actions">
           <button onClick={() => navigate('/login')} className="btn btn-secondary btn-sm">Login</button>
@@ -82,7 +82,7 @@ const LandingPage = () => {
           </div>
           <h1>Clear the Noise. <br /><span className="text-gradient">Focus on High-Impact.</span></h1>
           <p className="hero-description">
-            The unified dashboard for busy professionals. PriorityFlow aggregates your emails, Slack messages, 
+            The unified dashboard for busy professionals. Clutsch aggregates your emails, Slack messages, 
             and tasks, then uses AI to rank them by urgency and importance.
           </p>
           <div className="hero-actions">
@@ -94,7 +94,7 @@ const LandingPage = () => {
         </div>
         <div className="hero-visual">
           <div className="hero-image-container glass">
-            <img src={heroImage} alt="PriorityFlow Dashboard Mockup" />
+            <img src={heroImage} alt="Clutsch Dashboard Mockup" />
           </div>
         </div>
       </section>
@@ -150,29 +150,53 @@ const LandingPage = () => {
         </div>
         <div className="pricing-grid">
           <PricingCard 
-            tier="Pro"
-            price="19"
-            cta="Get Started"
+            tier="Free"
+            price="0"
+            cta="Get Started Free"
             features={[
-              "All Standard Integrations",
+              "2 Integrations",
+              "50 Messages/mo",
               "AI Priority Scoring",
-              "Quick Actions (Snooze/Archive)",
-              "Basic Search & Filtering",
+              "Basic Support"
+            ]}
+          />
+          <PricingCard 
+            tier="Pro"
+            price="12"
+            cta="Get Pro"
+            features={[
+              "All Integrations",
+              "Unlimited Messages",
+              "AI Priority Scoring",
+              "Quick Actions",
+              "Advanced Search",
               "Mobile Access"
+            ]}
+          />
+          <PricingCard 
+            tier="SME"
+            price="Custom"
+            cta="Contact Sales"
+            highlighted={true}
+            features={[
+              "Everything in Pro",
+              "Up to 20 Users",
+              "Team Shared Feeds",
+              "Delegation Workflow",
+              "Priority Support"
             ]}
           />
           <PricingCard 
             tier="Enterprise"
             price="Custom"
             cta="Contact Sales"
-            highlighted={true}
             features={[
-              "Everything in Pro",
-              "Shared Team Feeds",
-              "Delegation Workflow",
-              "Custom Priority Logic",
+              "Everything in SME",
+              "Unlimited Users",
+              "Custom Integrations",
               "SAML / SSO",
-              "Dedicated Account Manager"
+              "Dedicated Manager",
+              "Analytics"
             ]}
           />
         </div>
@@ -183,8 +207,8 @@ const LandingPage = () => {
         <div className="footer-content">
           <div className="footer-brand">
             <div className="logo">
-              <div className="logo-icon">P</div>
-              <span className="logo-text">PriorityFlow</span>
+              <div className="logo-icon" style={{ background: 'linear-gradient(135deg, #6C3BFF, #00F0FF)' }}>C</div>
+              <span className="logo-text text-display" style={{ fontWeight: 700, letterSpacing: '-0.03em' }}>Clutsch</span>
             </div>
             <p>Mastering your focus, one priority at a time.</p>
           </div>
@@ -204,7 +228,7 @@ const LandingPage = () => {
           </div>
         </div>
         <div className="footer-bottom">
-          <p>&copy; 2026 PriorityFlow Inc. All rights reserved.</p>
+          <p>&copy; 2026 Clutsch Inc. All rights reserved.</p>
         </div>
       </footer>
     </div>
