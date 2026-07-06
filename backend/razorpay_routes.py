@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Body
 from auth.models import User
 from auth.dependencies import get_current_active_user
 from database import db
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 import logging
 import time
 import json
@@ -20,8 +20,20 @@ RAZORPAY_WEBHOOK_SECRET = os.environ.get("RAZORPAY_WEBHOOK_SECRET", "mock_webhoo
 
 client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
+VALID_PLANS = ["Free", "Pro", "SME", "Enterprise"]
+# Plans that a user can activate self-serve. SME/Enterprise are custom-priced
+# (contact sales) and Pro is the only self-serve paid tier ($12/mo).
+SELF_SERVE_PAID_PLANS = ["Pro"]
+
 class SubscriptionRequest(BaseModel):
-    plan: str # "Pro" or "Enterprise"
+    plan: str  # "Free", "Pro", "SME", or "Enterprise"
+
+    @field_validator("plan")
+    @classmethod
+    def validate_plan(cls, v: str) -> str:
+        if v not in VALID_PLANS:
+            raise ValueError(f"Invalid plan '{v}'. Must be one of {VALID_PLANS}")
+        return v
 
 class PaymentVerificationRequest(BaseModel):
     razorpay_payment_id: str
@@ -38,12 +50,33 @@ async def create_subscription(
     """
     # Mock Plan IDs (In production, these come from Razorpay Dashboard)
     plan_ids = {
+        "Free": os.environ.get("RAZORPAY_PLAN_FREE", "plan_mock_free_001"),
         "Pro": os.environ.get("RAZORPAY_PLAN_PRO", "plan_mock_pro_123"),
-        "Enterprise": os.environ.get("RAZORPAY_PLAN_ENTERPRISE", "plan_mock_ent_456")
+        "SME": os.environ.get("RAZORPAY_PLAN_SME", "plan_mock_sme_456"),
+        "Enterprise": os.environ.get("RAZORPAY_PLAN_ENTERPRISE", "plan_mock_ent_789")
     }
     
     if req.plan not in plan_ids:
         raise HTTPException(status_code=400, detail="Invalid plan selected")
+    
+    # Free plan: no payment needed
+    if req.plan == "Free":
+        db.update_billing_plan(current_user.tenant_id, "Free", f"free_{int(time.time())}")
+        return {
+            "subscription_id": f"free_{int(time.time())}",
+            "key_id": RAZORPAY_KEY_ID,
+            "plan": "Free",
+            "amount": 0,
+            "message": "Free plan activated"
+        }
+    
+    # SME & Enterprise: contact sales flow
+    if req.plan in ("SME", "Enterprise"):
+        return {
+            "plan": req.plan,
+            "message": f"Please contact sales@clutsch.com to discuss {req.plan} pricing",
+            "requires_contact": True
+        }
 
     try:
         # Check if we should use real client or mock
@@ -180,6 +213,6 @@ async def get_subscription_status(current_user: User = Depends(get_current_activ
         return {
             "plan": "Free",
             "usage": {"active_integrations": 0, "team_members": 0, "ai_items_processed": 0, "smart_responses": 0},
-            "limits": {"active_integrations": 5, "team_members": 5, "ai_items_processed": 1000, "smart_responses": 20}
+            "limits": dict(db.PLAN_LIMITS["Free"])
         }
     return billing_info
