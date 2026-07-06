@@ -319,28 +319,37 @@ class MockDatabase:
         with self._lock:
             return self.tenants_billing.get(tenant_id)
 
+    # Per-plan limits aligned with the Clutsch business plan tiers.
+    # Free: individual, up to 2 integrations and 50 messages/month.
+    # Pro: individual, full integrations + AI priority scoring.
+    # SME: small business, up to 20 users, team collaboration.
+    # Enterprise: 20+ users, advanced analytics, SSO, dedicated support.
+    PLAN_LIMITS = {
+        "Free": {"active_integrations": 2, "team_members": 1, "ai_items_processed": 50, "smart_responses": 5},
+        "Pro": {"active_integrations": 10, "team_members": 1, "ai_items_processed": 5000, "smart_responses": 100},
+        "SME": {"active_integrations": 25, "team_members": 20, "ai_items_processed": 25000, "smart_responses": 1000},
+        "Enterprise": {"active_integrations": 100, "team_members": 1000, "ai_items_processed": 100000, "smart_responses": 5000},
+    }
+
     def update_billing_plan(self, tenant_id: str, plan: str, subscription_id: str = None, customer_id: str = None):
         with self._lock:
+            # Normalize/validate plan; default unknown plans to Free.
+            if plan not in self.PLAN_LIMITS:
+                plan = "Free"
+
             if tenant_id not in self.tenants_billing:
                 self.tenants_billing[tenant_id] = {
                     "usage": {"active_integrations": 0, "team_members": 0, "ai_items_processed": 0, "smart_responses": 0},
-                    "limits": {"active_integrations": 5, "team_members": 5, "ai_items_processed": 1000, "smart_responses": 20}
+                    "limits": dict(self.PLAN_LIMITS["Free"])
                 }
             self.tenants_billing[tenant_id]["plan"] = plan
             if subscription_id:
                 self.tenants_billing[tenant_id]["subscription_id"] = subscription_id
             if customer_id:
                 self.tenants_billing[tenant_id]["customer_id"] = customer_id
-            
-            # Update limits based on plan
-            if plan == "Pro":
-                self.tenants_billing[tenant_id]["limits"] = {
-                    "active_integrations": 10, "team_members": 20, "ai_items_processed": 5000, "smart_responses": 100
-                }
-            elif plan == "Enterprise":
-                self.tenants_billing[tenant_id]["limits"] = {
-                    "active_integrations": 100, "team_members": 1000, "ai_items_processed": 100000, "smart_responses": 5000
-                }
+
+            # Update limits based on plan (all 4 tiers)
+            self.tenants_billing[tenant_id]["limits"] = dict(self.PLAN_LIMITS[plan])
             return True
 
     def get_custom_weights(self, tenant_id: str):
