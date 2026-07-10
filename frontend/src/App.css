@@ -3626,3 +3626,107 @@ input:checked + .slider:before {
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================================
+   Responsive / Mobile-first breakpoints
+   Added for task: make dashboard, Settings and compliance/consent screens
+   usable at 375px, with tablet handling at 768px and 1024px.
+   Active stylesheet is App.css (no design-system-v2.css exists in this repo).
+   ========================================================================== */
+
+/* Ensure the priority gauge SVG can scale down on small screens.
+   The SVG has hardcoded width/height=100 attributes, so we constrain it
+   with CSS and let it shrink responsively. */
+.priority-gauge svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* --- Tablet: <= 1024px --- */
+@media (max-width: 1024px) {
+  .dashboard-3column {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .dashboard-3column .items-scroll {
+    max-height: 60vh;
+  }
+  .billing-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Small tablet / large phone: <= 768px --- */
+@media (max-width: 768px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+  /* Collapse the settings sidebar nav into a horizontally scrollable tab bar */
+  .settings-nav {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 8px;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  .settings-nav-item {
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+  .feed-filters {
+    flex-wrap: wrap;
+  }
+  .plans-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Phone: <= 375px --- */
+@media (max-width: 375px) {
+  .dashboard-3column {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+  .settings-nav {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 8px;
+  }
+  /* Scale the priority gauge down so it fits narrow cards */
+  .priority-gauge svg {
+    width: 72px;
+    height: 72px;
+    max-width: 100%;
+  }
+  .feed-filters {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  /* Modal overlays: use nearly full width and stay scrollable on tiny screens */
+  .modal-overlay {
+    padding: 10px;
+    align-items: flex-start;
+  }
+  .modal-card {
+    max-width: 95vw;
+    width: 95vw;
+    margin: 10px auto;
+    max-height: 90vh;
+  }
+  .modal-header {
+    padding: 16px;
+  }
+  /* WCAG 2.5.5: interactive controls get a minimum 44px tap target */
+  button,
+  .btn,
+  .focus-action-btn,
+  .settings-nav-item,
+  a.btn {
+    min-height: 44px;
+  }
+}
