@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Trash2 } from 'lucide-react';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 const IntegrationSettingsModal = ({ isOpen, onClose, integration, onSave, onDisconnect }) => {
+  const { containerRef, onKeyDown } = useFocusTrap(onClose, typeof isOpen === 'undefined' ? true : isOpen);
   const [settings, setSettings] = useState({
     enabled: true,
     syncFrequency: 'hourly',
@@ -40,7 +42,7 @@ const IntegrationSettingsModal = ({ isOpen, onClose, integration, onSave, onDisc
             </div>
             <h2 style={{ fontSize: '1.25rem' }}>{integration.name} Settings</h2>
           </div>
-          <button className="close-btn" onClick={onClose}><X size={24} /></button>
+          <button className="close-btn" onClick={onClose} aria-label="Close dialog"><X size={24} /></button>
         </div>
 
         <div className="modal-body" style={{ padding: '24px' }}>

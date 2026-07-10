@@ -1,0 +1,63 @@
+[1mdiff --git a/design/DESIGN_RATIONALE.md b/design/DESIGN_RATIONALE.md[m
+[1mindex db583a1..af59a93 100644[m
+[1m--- a/design/DESIGN_RATIONALE.md[m
+[1m+++ b/design/DESIGN_RATIONALE.md[m
+[36m@@ -1,7 +1,7 @@[m
+[31m-# PriorityFlow Design Rationale[m
+[32m+[m[32m# Clutsch Design Rationale[m
+ [m
+ ## Overview[m
+[31m-PriorityFlow is designed to minimize cognitive load for busy professionals by centralizing communications and highlighting the most critical actions. The design focuses on clarity, urgency visualization, and actionable insights.[m
+[32m+[m[32mClutsch is designed to minimize cognitive load for busy professionals by centralizing communications and highlighting the most critical actions. The design focuses on clarity, urgency visualization, and actionable insights.[m
+ [m
+ ## Key Design Principles[m
+ [m
+[36m@@ -55,7 +55,7 @@[m [mPriorityFlow is designed to minimize cognitive load for busy professionals by ce[m
+ - `enterprise-audit-logs.png`: Administrative audit logs for tracking organizational changes.[m
+ - `advanced-tuning-engine.png`: Advanced user controls for Semantic Weighting and Contextual Scaling.[m
+ - `custom-integration-framework.png`: UI for building and configuring custom third-party connectors.[m
+[31m-- `data-mapping-normalizer.png`: Tool for mapping custom data fields to the PriorityFlow schema.[m
+[32m+[m[32m- `data-mapping-normalizer.png`: Tool for mapping custom data fields to the Clutsch schema.[m
+ [m
+ ## Marketing Landing Page Design[m
+ The landing page is designed to convert high-level professionals by focusing on the transition from "chaos" to "focus".[m
+[36m@@ -121,7 +121,7 @@[m [mFor detailed findings, see `RESEARCH_NOTES.md`.[m
+ [m
+ ### 1. KPI Visualization[m
+ - **Focus**: Actionable metrics for managers to measure team productivity and responsiveness.[m
+[31m-- **Time to Action**: A primary metric showing the average time elapsed between receiving a high-priority item and the first meaningful action (Reply, Resolve, Delegate). The dashboard highlights the reduction in this time post-PriorityFlow.[m
+[32m+[m[32m- **Time to Action**: A primary metric showing the average time elapsed between receiving a high-priority item and the first meaningful action (Reply, Resolve, Delegate). The dashboard highlights the reduction in this time post-Clutsch.[m
+ - **Team Focus Score**: A proprietary metric based on how effectively the team is addressing high-priority items compared to low-priority distractions.[m
+ - **Visuals**: Large, high-contrast KPI cards with trend indicators and sparklines.[m
+ [m
+[36m@@ -167,13 +167,13 @@[m [mFor detailed findings, see `RESEARCH_NOTES.md`.[m
+ ### 1. Cohesive Support[m
+ - **Goal:** Provide a self-service resource that feels like an extension of the product.[m
+ - **Experience:** Clean search-first interface with categorized documentation for quick troubleshooting.[m
+[31m-- **Brand Alignment:** Maintains the dark mode glassmorphism theme to keep the user in the "PriorityFlow environment" even when seeking help.[m
+[32m+[m[32m- **Brand Alignment:** Maintains the dark mode glassmorphism theme to keep the user in the "Clutsch environment" even when seeking help.[m
+ - **Mockup:** `help-center-mockup.png` shows the welcoming, organized grid of help categories.[m
+ [m
+ ## Enterprise Administration & User Management[m
+ [m
+ ### 1. Organizational Governance[m
+[31m-- **Goal:** Provide administrators with complete control over their organization's PriorityFlow environment.[m
+[32m+[m[32m- **Goal:** Provide administrators with complete control over their organization's Clutsch environment.[m
+ - **User Directory:** A centralized list for managing seats, invitations, and role assignments (Admin, Manager, Member).[m
+ - **Mockup:** `enterprise-user-management.png` features the high-density directory table and role management controls.[m
+ [m
+[36m@@ -216,12 +216,12 @@[m [mFor detailed findings, see `RESEARCH_NOTES.md`.[m
+ ## Custom Integration Framework (Phase 3)[m
+ [m
+ ### 1. Developer-Friendly Connector Builder[m
+[31m-- **Goal:** Empower Enterprise admins to connect proprietary or niche APIs to PriorityFlow.[m
+[32m+[m[32m- **Goal:** Empower Enterprise admins to connect proprietary or niche APIs to Clutsch.[m
+ - **Workflow:** A multi-step builder for defining endpoints, authentication (including OAuth2 and API Keys), and polling intervals.[m
+ - **Mockup:** `custom-integration-framework.png` demonstrates the technical yet accessible builder interface.[m
+ [m
+ ### 2. Schema Mapping & Normalization[m
+[31m-- **Concept:** Every external source has different field names. This tool standardizes them into the PriorityFlow schema.[m
+[32m+[m[32m- **Concept:** Every external source has different field names. This tool standardizes them into the Clutsch schema.[m
+ - **Interaction:** Visual mapping of JSON source keys to destination fields (e.g., "subject" -> "Message Title").[m
+ - **Smart Logic:** Admins can define "Urgency Triggers" within the mapping—for example, mapping a "Customer Tier" field so that "Enterprise" status automatically boosts an item's priority score.[m
+ - **Mockup:** `data-mapping-normalizer.png` shows the side-by-side mapping and priority logic builder.[m

@@ -1,7 +1,9 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 const LegalModal = ({ type, onClose }) => {
+  const { containerRef, onKeyDown } = useFocusTrap(onClose, typeof isOpen === 'undefined' ? true : isOpen);
   const content = {
     tos: {
       title: "Terms of Service",
@@ -59,7 +61,7 @@ const LegalModal = ({ type, onClose }) => {
       <div className="modal-card legal-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h2>{active.title}</h2>
-          <button className="close-btn" onClick={onClose}>
+          <button className="close-btn" onClick={onClose} aria-label="Close dialog">
             <X size={24} />
           </button>
         </div>

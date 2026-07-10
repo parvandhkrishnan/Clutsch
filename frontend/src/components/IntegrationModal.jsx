@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 const IntegrationModal = ({ isOpen, onClose, integration, onConnectSuccess }) => {
+  const { containerRef, onKeyDown } = useFocusTrap(onClose, typeof isOpen === 'undefined' ? true : isOpen);
   const [step, setStep] = useState('initial'); // initial, connecting, success, error
   const [error, setError] = useState(null);
 
@@ -40,7 +42,7 @@ const IntegrationModal = ({ isOpen, onClose, integration, onConnectSuccess }) =>
       <div className="modal-card integration-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
         <div className="modal-header">
           <h2>Connect {integration.name}</h2>
-          <button className="close-btn" onClick={onClose}><X size={24} /></button>
+          <button className="close-btn" onClick={onClose} aria-label="Close dialog"><X size={24} /></button>
         </div>
         
         <div className="modal-body" style={{ padding: '40px 20px', textAlign: 'center' }}>
