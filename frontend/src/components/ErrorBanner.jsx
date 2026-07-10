@@ -21,13 +21,13 @@ const ErrorBanner = () => {
   if (!error) return null;
 
   return (
-    <div className="error-banner rate-limit">
+    <div className="error-banner rate-limit" role="alert" aria-live="polite">
       <div className="error-content">
-        <AlertCircle size={20} />
+        <AlertCircle size={20} aria-hidden="true" />
         <span>{error.message}</span>
       </div>
-      <button className="close-btn" onClick={() => setError(null)}>
-        <X size={18} />
+      <button className="close-btn" onClick={() => setError(null)} aria-label="Dismiss notification">
+        <X size={18} aria-hidden="true" />
       </button>
     </div>
   );

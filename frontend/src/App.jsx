@@ -20,8 +20,9 @@ import './App.css';
 
 const MainLayout = ({ children }) => (
   <div className="app-container">
+    <a href="#main-content" className="skip-to-content">Skip to content</a>
     <Sidebar />
-    <main className="main-content">
+    <main id="main-content" className="main-content" tabIndex={-1}>
       {children}
     </main>
   </div>

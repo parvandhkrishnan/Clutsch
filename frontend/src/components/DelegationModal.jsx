@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, User, Shield, Clock, Send, Loader2 } from 'lucide-react';
 import api from '../utils/api';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 const DelegationModal = ({ isOpen, onClose, item, onDelegate }) => {
+  const { containerRef, onKeyDown } = useFocusTrap(onClose, isOpen);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMember, setSelectedMember] = useState(null);
   const [delegating, setDelegating] = useState(false);
@@ -56,13 +58,15 @@ const DelegationModal = ({ isOpen, onClose, item, onDelegate }) => {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content delegation-modal" onClick={e => e.stopPropagation()}>
+      <div className="modal-content delegation-modal" onClick={e => e.stopPropagation()}
+        ref={containerRef} onKeyDown={onKeyDown}
+        role="dialog" aria-modal="true" aria-label="Delegate Item">
         <div className="modal-header">
           <div className="modal-title-area">
-            <Shield size={20} className="modal-icon" />
+            <Shield size={20} className="modal-icon" aria-hidden="true" />
             <h2>Delegate Item</h2>
           </div>
-          <button className="close-btn" onClick={onClose}><X size={20} /></button>
+          <button className="close-btn" onClick={onClose} aria-label="Close dialog"><X size={20} aria-hidden="true" /></button>
         </div>
 
         <div className="modal-body">
