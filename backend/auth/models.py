@@ -54,7 +54,7 @@ def get_users_db() -> List[User]:
                 tenant_id="t-acme",
                 role="admin",
                 hashed_password=pwd_context.hash(admin_pw),
-                mfa_enabled=True
+                mfa_enabled=False  # MFA is opt-in; users enable via /auth/mfa/setup
             ),
             User(
                 id="u-2",
@@ -72,7 +72,7 @@ def get_users_db() -> List[User]:
                 tenant_id="t-globex",
                 role="admin",
                 hashed_password=pwd_context.hash(sarah_pw),
-                mfa_enabled=True
+                mfa_enabled=False
             )
         ]
     return _users_db
@@ -102,3 +102,25 @@ def get_tenant_by_id(tenant_id: str) -> Optional[Tenant]:
         if tenant.id == tenant_id:
             return tenant
     return None
+
+def add_user(username: str, email: str, password: str, tenant_id: str = "t-acme", role: str = "user", hashed_password: str = None) -> User:
+    """Add a new user to the in-memory database."""
+    global _users_db
+    users = get_users_db()
+    # Check for duplicates
+    for u in users:
+        if u.username == username:
+            return None
+    new_id = f"u-{len(users) + 1}"
+    new_user = User(
+        id=new_id,
+        username=username,
+        email=email,
+        tenant_id=tenant_id,
+        role=role,
+        hashed_password=hashed_password or pwd_context.hash(password),
+        mfa_enabled=False
+    )
+    users.append(new_user)
+    _users_db = users
+    return new_user

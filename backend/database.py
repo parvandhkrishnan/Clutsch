@@ -1,10 +1,17 @@
 import time
 import logging
 import uuid
+import json
+import os
 from typing import List, Dict, Any, Optional
+from security import encrypt_secret, decrypt_secret
 from threading import Lock
 
 logger = logging.getLogger("database")
+
+# Persistence
+DATA_DIR = os.environ.get("CLUTSCH_DATA_DIR", "/home/team/shared/data")
+DB_FILE = os.path.join(DATA_DIR, "database.json")
 
 class MockDatabase:
     def __init__(self):
@@ -57,6 +64,14 @@ class MockDatabase:
                 }
             }
         }
+        
+        # MFA storage
+        self.mfa_secrets = {}  # user_id -> totp_secret
+        self.mfa_pending_secrets = {}  # user_id -> pending_totp_secret (before verification)
+        self.mfa_recovery_codes = {}  # user_id -> [hashed_recovery_codes]
+        
+        # Load persisted state from disk
+        self._load_from_disk()
 
     def upsert_items(self, items: List[Dict[str, Any]]):
         with self._lock:
@@ -129,7 +144,15 @@ class MockDatabase:
                     "priority_threshold": 0
                 }
             
-            self.connected_integrations[tenant_id][provider].update(tokens)
+            # Encrypt sensitive token fields at rest
+            encrypted_tokens = {}
+            for key, value in tokens.items():
+                if key.lower() in ('token', 'secret', 'refresh_token', 'access_token', 'api_key', 'password'):
+                    encrypted_tokens[key] = encrypt_secret(str(value))
+                else:
+                    encrypted_tokens[key] = value
+            
+            self.connected_integrations[tenant_id][provider].update(encrypted_tokens)
             logger.info(f"Saved OAuth tokens for {tenant_id}/{provider}")
             return True
 
@@ -143,9 +166,19 @@ class MockDatabase:
 
     def get_integration_config(self, tenant_id: str, provider: str) -> Optional[Dict[str, Any]]:
         with self._lock:
-            if tenant_id in self.connected_integrations:
-                return self.connected_integrations[tenant_id].get(provider)
-            return None
+            if tenant_id not in self.connected_integrations:
+                return None
+            config = self.connected_integrations[tenant_id].get(provider)
+            if not config:
+                return None
+            # Decrypt sensitive fields on read
+            decrypted = {}
+            for key, value in config.items():
+                if key.lower() in ('token', 'secret', 'refresh_token', 'access_token', 'api_key', 'password'):
+                    decrypted[key] = decrypt_secret(str(value))
+                else:
+                    decrypted[key] = value
+            return decrypted
 
     def enforce_retention_policy(self, days: int = 30):
         cutoff = time.time() - (days * 24 * 60 * 60)
@@ -319,28 +352,37 @@ class MockDatabase:
         with self._lock:
             return self.tenants_billing.get(tenant_id)
 
+    # Per-plan limits aligned with the Clutsch business plan tiers.
+    # Free: individual, up to 2 integrations and 50 messages/month.
+    # Pro: individual, full integrations + AI priority scoring.
+    # SME: small business, up to 20 users, team collaboration.
+    # Enterprise: 20+ users, advanced analytics, SSO, dedicated support.
+    PLAN_LIMITS = {
+        "Free": {"active_integrations": 2, "team_members": 1, "ai_items_processed": 50, "smart_responses": 5},
+        "Pro": {"active_integrations": 10, "team_members": 1, "ai_items_processed": 5000, "smart_responses": 100},
+        "SME": {"active_integrations": 25, "team_members": 20, "ai_items_processed": 25000, "smart_responses": 1000},
+        "Enterprise": {"active_integrations": 100, "team_members": 1000, "ai_items_processed": 100000, "smart_responses": 5000},
+    }
+
     def update_billing_plan(self, tenant_id: str, plan: str, subscription_id: str = None, customer_id: str = None):
         with self._lock:
+            # Normalize/validate plan; default unknown plans to Free.
+            if plan not in self.PLAN_LIMITS:
+                plan = "Free"
+
             if tenant_id not in self.tenants_billing:
                 self.tenants_billing[tenant_id] = {
                     "usage": {"active_integrations": 0, "team_members": 0, "ai_items_processed": 0, "smart_responses": 0},
-                    "limits": {"active_integrations": 5, "team_members": 5, "ai_items_processed": 1000, "smart_responses": 20}
+                    "limits": dict(self.PLAN_LIMITS["Free"])
                 }
             self.tenants_billing[tenant_id]["plan"] = plan
             if subscription_id:
                 self.tenants_billing[tenant_id]["subscription_id"] = subscription_id
             if customer_id:
                 self.tenants_billing[tenant_id]["customer_id"] = customer_id
-            
-            # Update limits based on plan
-            if plan == "Pro":
-                self.tenants_billing[tenant_id]["limits"] = {
-                    "active_integrations": 10, "team_members": 20, "ai_items_processed": 5000, "smart_responses": 100
-                }
-            elif plan == "Enterprise":
-                self.tenants_billing[tenant_id]["limits"] = {
-                    "active_integrations": 100, "team_members": 1000, "ai_items_processed": 100000, "smart_responses": 5000
-                }
+
+            # Update limits based on plan (all 4 tiers)
+            self.tenants_billing[tenant_id]["limits"] = dict(self.PLAN_LIMITS[plan])
             return True
 
     def get_custom_weights(self, tenant_id: str):
@@ -371,6 +413,98 @@ class MockDatabase:
             self.semantic_weights[tenant_id] = weights
             return True
 
+    # --- MFA methods ---
+    def set_mfa_pending_secret(self, user_id: str, secret: str):
+        with self._lock:
+            self.mfa_pending_secrets[user_id] = secret
+
+    def get_mfa_pending_secret(self, user_id: str) -> Optional[str]:
+        with self._lock:
+            return self.mfa_pending_secrets.get(user_id)
+
+    def clear_mfa_pending_secret(self, user_id: str):
+        with self._lock:
+            self.mfa_pending_secrets.pop(user_id, None)
+
+    def set_mfa_secret(self, user_id: str, secret: str):
+        with self._lock:
+            self.mfa_secrets[user_id] = secret
+
+    def get_mfa_secret(self, user_id: str) -> Optional[str]:
+        with self._lock:
+            return self.mfa_secrets.get(user_id)
+
+    def clear_mfa_secret(self, user_id: str):
+        with self._lock:
+            self.mfa_secrets.pop(user_id, None)
+
+    def set_mfa_recovery_codes(self, user_id: str, codes: List[str]):
+        with self._lock:
+            self.mfa_recovery_codes[user_id] = codes
+
+    def get_mfa_recovery_codes(self, user_id: str) -> Optional[List[str]]:
+        with self._lock:
+            return self.mfa_recovery_codes.get(user_id)
+
+    def clear_mfa_recovery_codes(self, user_id: str):
+        with self._lock:
+            self.mfa_recovery_codes.pop(user_id, None)
+
+    # --- Consent & DPDP methods ---
+    def record_consent(self, user_id: str, consent: Dict[str, Any]):
+        with self._lock:
+            if not hasattr(self, 'consent_records'):
+                self.consent_records = {}
+            if user_id not in self.consent_records:
+                self.consent_records[user_id] = []
+            record = {**consent, "timestamp": time.time()}
+            self.consent_records[user_id].append(record)
+
+    def get_consents(self, user_id: str) -> List[Dict[str, Any]]:
+        with self._lock:
+            if not hasattr(self, 'consent_records'):
+                return []
+            return self.consent_records.get(user_id, [])
+
+    # Granular per-purpose consent preferences (DPDP + GDPR)
+    def get_consent_preferences(self, user_id: str) -> Dict[str, bool]:
+        if not hasattr(self, 'consent_preferences'):
+            self.consent_preferences = {}
+        return self.consent_preferences.get(user_id, {})
+
+    def set_consent_preferences(self, user_id: str, prefs: Dict[str, bool]):
+        with self._lock:
+            if not hasattr(self, 'consent_preferences'):
+                self.consent_preferences = {}
+            self.consent_preferences[user_id] = prefs
+
+    def set_nominee(self, user_id: str, nominee: Dict[str, str]):
+        with self._lock:
+            if not hasattr(self, 'nominees'):
+                self.nominees = {}
+            self.nominees[user_id] = nominee
+
+    def get_nominee(self, user_id: str) -> Optional[Dict[str, str]]:
+        with self._lock:
+            if not hasattr(self, 'nominees'):
+                return None
+            return self.nominees.get(user_id)
+
+    def add_grievance(self, grievance: Dict[str, Any]):
+        with self._lock:
+            if not hasattr(self, 'grievance_logs'):
+                self.grievance_logs = []
+            grievance["id"] = str(uuid.uuid4())
+            self.grievance_logs.append(grievance)
+
+    def get_grievances(self, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        with self._lock:
+            if not hasattr(self, 'grievance_logs'):
+                return []
+            if user_id:
+                return [g for g in self.grievance_logs if g.get("user_id") == user_id]
+            return self.grievance_logs
+
     def clear(self):
         with self._lock:
             self._items.clear()
@@ -384,5 +518,70 @@ class MockDatabase:
             self.contact_priorities.clear()
             self.custom_integrations.clear()
             self.workflows.clear()
+
+    # --- Persistence Layer ---
+    def _serialize(self) -> dict:
+        """Serialize database state to a JSON-serializable dict."""
+        return {
+            "items": self._items,
+            "audit_logs": self.audit_logs,
+            "archived_items": {k: list(v) for k, v in self.archived_items.items()},
+            "snoozed_items": self.snoozed_items,
+            "delegations": self.delegations,
+            "custom_weights": self.custom_weights,
+            "semantic_weights": self.semantic_weights,
+            "contact_priorities": self.contact_priorities,
+            "project_priorities": self.project_priorities,
+            "client_priorities": self.client_priorities,
+            "custom_integrations": self.custom_integrations,
+            "workflows": self.workflows,
+            "tenants_billing": self.tenants_billing,
+            "connected_integrations": self.connected_integrations,
+            "focus_scores": self.focus_scores,
+            "team_metrics": self.team_metrics,
+        }
+
+    def _deserialize(self, data: dict):
+        """Restore database state from a dict."""
+        self._items = data.get("items", [])
+        self.audit_logs = data.get("audit_logs", [])
+        self.archived_items = {k: set(v) for k, v in data.get("archived_items", {}).items()}
+        self.snoozed_items = data.get("snoozed_items", {})
+        self.delegations = data.get("delegations", {})
+        self.custom_weights = data.get("custom_weights", {})
+        self.semantic_weights = data.get("semantic_weights", {})
+        self.contact_priorities = data.get("contact_priorities", {})
+        self.project_priorities = data.get("project_priorities", {})
+        self.client_priorities = data.get("client_priorities", {})
+        self.custom_integrations = data.get("custom_integrations", {})
+        self.workflows = data.get("workflows", {})
+        self.tenants_billing = data.get("tenants_billing", {})
+        self.connected_integrations = data.get("connected_integrations", {})
+        self.focus_scores = data.get("focus_scores", {})
+        self.team_metrics = data.get("team_metrics", {})
+
+    def save_to_disk(self):
+        """Persist current database state to JSON file."""
+        try:
+            os.makedirs(DATA_DIR, exist_ok=True)
+            state = self._serialize()
+            with open(DB_FILE, "w") as f:
+                json.dump(state, f, indent=2, default=str)
+            logger.info(f"Database saved to {DB_FILE}")
+        except Exception as e:
+            logger.error(f"Failed to save database: {e}")
+
+    def _load_from_disk(self):
+        """Load database state from JSON file on startup."""
+        if not os.path.exists(DB_FILE):
+            logger.info(f"No saved database found at {DB_FILE}, starting fresh")
+            return
+        try:
+            with open(DB_FILE, "r") as f:
+                state = json.load(f)
+            self._deserialize(state)
+            logger.info(f"Database loaded from {DB_FILE} ({len(self._items)} items)")
+        except Exception as e:
+            logger.error(f"Failed to load database: {e}")
 
 db = MockDatabase()

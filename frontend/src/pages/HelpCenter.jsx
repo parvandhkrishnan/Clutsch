@@ -62,7 +62,7 @@ const HelpCenter = () => {
     },
     {
       title: 'API & Developers',
-      description: 'Build custom tools on top of PriorityFlow.',
+      description: 'Build custom tools on top of Clutsch.',
       icon: Terminal,
       count: 20
     }

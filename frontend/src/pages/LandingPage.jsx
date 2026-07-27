@@ -1,214 +1,153 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  CheckCircle2, 
-  ArrowRight, 
-  MessageSquare, 
-  Mail, 
-  MessageCircle, 
-  LayoutGrid, 
-  Zap, 
-  Shield, 
-  Layers, 
-  Users,
-  Target,
-  Rocket
-} from 'lucide-react';
-import heroImage from '../assets/hero.png';
+import { CheckCircle2, ArrowRight, Zap, Layers, Target, Shield } from 'lucide-react';
 
 const FeatureCard = ({ icon: Icon, title, description }) => (
-  <div className="landing-feature-card glass">
-    <div className="feature-icon-container">
-      <Icon size={24} className="feature-icon" />
-    </div>
-    <h3>{title}</h3>
-    <p>{description}</p>
+  <div className="feature-card"><div className="icon"><Icon size={24} /></div><h3>{title}</h3><p className="text-body" style={{ color: 'var(--text-secondary)' }}>{description}</p></div>
+);
+
+const PricingCard = ({ tier, price, features, cta, isFree, onClick }) => (
+  <div className="pricing-card">
+    <div className="tier">{tier}</div>
+    <div className="price">{isFree ? <span style={{ fontSize: '36px', fontWeight: 700 }}>Free</span> : price === 'Custom' ? <span style={{ fontSize: '28px', fontWeight: 700 }}>Custom</span> : <><span className="currency">$</span><span className="amount">{price}</span><span className="period">/mo</span></>}</div>
+    <ul>{features.map((f, i) => (<li key={i}><CheckCircle2 size={16} className="check-icon" />{f}</li>))}</ul>
+    <button className="btn btn-secondary" style={{ marginTop: 'auto' }} onClick={onClick}>{cta}</button>
   </div>
 );
 
-const IntegrationIcon = ({ icon: Icon, label }) => (
-  <div className="integration-chip glass">
-    <Icon size={18} />
-    <span>{label}</span>
+const IntegrationIcon = ({ src, label }) => (
+  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 18px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)' }}>
+    <img src={src} alt={label} width="20" height="20" style={{ borderRadius: '2px' }} /><span>{label}</span>
   </div>
 );
 
-const PricingCard = ({ tier, price, features, highlighted, cta }) => (
-  <div className={`pricing-card glass ${highlighted ? 'highlighted' : ''}`}>
-    <div className="pricing-header">
-      <h4>{tier}</h4>
-      <div className="price">
-        <span className="currency">$</span>
-        <span className="amount">{price}</span>
-        {price !== 'Custom' && <span className="period">/mo</span>}
-      </div>
-    </div>
-    <ul className="pricing-features">
-      {features.map((feature, i) => (
-        <li key={i}>
-          <CheckCircle2 size={16} className="check-icon" />
-          <span>{feature}</span>
-        </li>
-      ))}
-    </ul>
-    <button className={`btn ${highlighted ? 'btn-primary' : 'btn-secondary'}`}>
-      {cta}
-    </button>
-  </div>
-);
+const GitHubIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>;
 
-const LandingPage = () => {
+const TwitterIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4l11.733 16h4.267l-11.733 -16z"/><path d="M4 20l6.768 -6.768m2.46 -2.46L20 4"/></svg>;
+
+const LinkedInIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>;
+
+export default function LandingPage() {
   const navigate = useNavigate();
-
+  const scrollTo = (id) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
   return (
     <div className="landing-container">
       <nav className="landing-nav">
-        <div className="logo">
-          <div className="logo-icon">P</div>
-          <span className="logo-text">PriorityFlow</span>
-        </div>
-        <div className="nav-actions">
+        <div className="logo"><div className="logo-icon">C</div><span className="logo-text">Clutsch</span></div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button onClick={() => scrollTo('features')} className="btn btn-ghost btn-sm">Features</button>
+          <button onClick={() => scrollTo('pricing')} className="btn btn-ghost btn-sm">Pricing</button>
           <button onClick={() => navigate('/login')} className="btn btn-secondary btn-sm">Login</button>
-          <button onClick={() => navigate('/login')} className="btn btn-primary btn-sm">Get Started</button>
+          <button onClick={() => navigate('/login?mode=signup')} className="btn btn-primary btn-sm">Get Started</button>
         </div>
       </nav>
 
-      {/* Hero Section */}
       <section className="landing-hero">
         <div className="hero-content">
-          <div className="badge-announcement">
-            <Zap size={14} />
-            <span>Now with AI-Powered Prioritization</span>
-          </div>
-          <h1>Clear the Noise. <br /><span className="text-gradient">Focus on High-Impact.</span></h1>
-          <p className="hero-description">
-            The unified dashboard for busy professionals. PriorityFlow aggregates your emails, Slack messages, 
-            and tasks, then uses AI to rank them by urgency and importance.
-          </p>
+          <div className="chip chip-accent" style={{ width: 'fit-content' }}><Zap size={14} /> Now with AI-Powered Prioritization</div>
+          <h1 className="text-display-xl" style={{ color: 'var(--text-primary)' }}>Clear the Noise.<br /><span className="text-gradient">Focus on What Matters.</span></h1>
+          <p className="text-body-l" style={{ color: 'var(--text-secondary)', maxWidth: '480px' }}>Clutsch aggregates your emails, Slack messages, and tasks, then uses AI to rank them by urgency.</p>
           <div className="hero-actions">
-            <button onClick={() => navigate('/login')} className="btn btn-primary btn-lg">
-              Start Free Trial <ArrowRight size={18} />
-            </button>
-            <p className="hero-note">No credit card required. 14-day free trial.</p>
+            <button onClick={() => navigate('/login?mode=signup')} className="btn btn-primary btn-lg">Start Free Trial <ArrowRight size={18} /></button>
+            <p className="text-caption" style={{ color: 'var(--text-tertiary)' }}>No credit card required. 14-day free trial.</p>
           </div>
         </div>
         <div className="hero-visual">
-          <div className="hero-image-container glass">
-            <img src={heroImage} alt="PriorityFlow Dashboard Mockup" />
+          <div className="card" style={{ padding: '12px', transform: 'perspective(1000px) rotateY(-3deg)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)' }}>
+            <svg width="100%" height="320" viewBox="0 0 520 320" style={{ borderRadius: '8px' }}>
+              <rect width="520" height="320" rx="8" fill="#FAFAF9"/>
+              <rect x="0" y="0" width="100" height="320" rx="8" fill="#FFF" stroke="#EAE8E4" strokeWidth="1"/>
+              <rect x="16" y="20" width="28" height="28" rx="6" fill="#6C3BFF"/>
+              <rect x="52" y="27" width="36" height="6" rx="3" fill="#1C1B1A" opacity="0.3"/>
+              <rect x="16" y="68" width="68" height="8" rx="4" fill="#F5F4F2"/>
+              <rect x="16" y="88" width="68" height="8" rx="4" fill="#F5F4F2"/>
+              <rect x="116" y="0" width="404" height="56" fill="#FFF"/>
+              <rect x="128" y="72" width="180" height="100" rx="12" fill="#FFF" stroke="#EAE8E4" strokeWidth="1"/>
+              <circle cx="148" cy="110" r="16" fill="#F0EBFF"/>
+              <rect x="170" y="96" width="80" height="6" rx="3" fill="#1C1B1A" opacity="0.6"/>
+              <rect x="128" y="188" width="180" height="100" rx="12" fill="#FFF" stroke="#EAE8E4" strokeWidth="1"/>
+              <circle cx="148" cy="226" r="16" fill="#F0EBFF"/>
+              <circle cx="276" cy="110" r="12" fill="#E8434F"/>
+              <circle cx="276" cy="226" r="12" fill="#F5B826"/>
+              <rect x="320" y="72" width="188" height="100" rx="12" fill="#FFF" stroke="#EAE8E4" strokeWidth="1"/>
+              <rect x="336" y="88" width="60" height="30" rx="6" fill="#F0EBFF"/>
+              <rect x="320" y="188" width="188" height="100" rx="12" fill="#FFF" stroke="#EAE8E4" strokeWidth="1"/>
+            </svg>
           </div>
         </div>
       </section>
 
-      {/* Integrations Section */}
-      <section className="landing-integrations">
-        <p className="section-subtitle">Trusted by leaders across every platform</p>
-        <div className="integrations-scroll">
-          <IntegrationIcon icon={Mail} label="Gmail" />
-          <IntegrationIcon icon={MessageCircle} label="Slack" />
-          <IntegrationIcon icon={LayoutGrid} label="Jira" />
-          <IntegrationIcon icon={Users} label="Teams" />
-          <IntegrationIcon icon={MessageSquare} label="WhatsApp" />
-          <IntegrationIcon icon={Rocket} label="Linear" />
+      <section style={{ padding: '60px 0', textAlign: 'center' }}>
+        <p className="text-caption" style={{ color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, marginBottom: '24px' }}>Works with your favorite tools</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px' }}>
+          <IntegrationIcon src="/logos/gmail.svg" label="Gmail" /><IntegrationIcon src="/logos/outlook.svg" label="Outlook" /><IntegrationIcon src="/logos/slack.svg" label="Slack" /><IntegrationIcon src="/logos/jira.svg" label="Jira" /><IntegrationIcon src="/logos/teams.svg" label="Teams" /><IntegrationIcon src="/logos/whatsapp.svg" label="WhatsApp" /><IntegrationIcon src="/logos/linear.svg" label="Linear" />
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="landing-features">
+      <section id="features" className="landing-section" style={{ padding: '80px 0' }}>
         <div className="section-header-centered">
           <h2>Everything you need to <span className="text-gradient">master your day</span></h2>
-          <p>Ditch the tab-switching. Bring all your communications into a single, intelligent workflow.</p>
+          <p className="text-body-l" style={{ color: 'var(--text-secondary)' }}>Bring all your communications into a single, intelligent workflow.</p>
         </div>
         <div className="features-grid">
-          <FeatureCard 
-            icon={Layers}
-            title="Unified Intelligence"
-            description="Connect Gmail, Slack, Jira, and more. See all your high-priority items in one place without the context switching."
-          />
-          <FeatureCard 
-            icon={Target}
-            title="AI Scoring Engine"
-            description="Our advanced model analyzes sender importance, deadlines, and content urgency to give every item a 0-100 priority score."
-          />
-          <FeatureCard 
-            icon={Zap}
-            title="Action-Oriented"
-            description="Archive, snooze, or reply directly from the feed. Designed for rapid triage so you can get back to deep work."
-          />
-          <FeatureCard 
-            icon={Shield}
-            title="Enterprise Privacy"
-            description="DPDP compliant and SOC2 ready. Your data is encrypted and used only to power your own prioritization."
-          />
+          <FeatureCard icon={Layers} title="Unified Intelligence" description="Connect Gmail, Slack, Jira, and more. See all your high-priority items in one place." />
+          <FeatureCard icon={Target} title="AI Scoring Engine" description="Analyzes sender importance, deadlines, and content urgency to score every item 0-100." />
+          <FeatureCard icon={Shield} title="Enterprise Privacy" description="DPDP compliant. Your data is encrypted and used only to power your own prioritization." />
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section className="landing-pricing">
+      <section id="pricing" className="landing-section" style={{ padding: '80px 0', background: 'var(--bg-subtle)' }}>
         <div className="section-header-centered">
-          <h2>Simple, transparent <span className="text-gradient">pricing</span></h2>
-          <p>Choose the plan that fits your scale.</p>
+          <h2>Simple, transparent pricing</h2>
+          <p className="text-body-l" style={{ color: 'var(--text-secondary)' }}>Choose the plan that fits your scale.</p>
         </div>
         <div className="pricing-grid">
-          <PricingCard 
-            tier="Pro"
-            price="19"
-            cta="Get Started"
-            features={[
-              "All Standard Integrations",
-              "AI Priority Scoring",
-              "Quick Actions (Snooze/Archive)",
-              "Basic Search & Filtering",
-              "Mobile Access"
-            ]}
-          />
-          <PricingCard 
-            tier="Enterprise"
-            price="Custom"
-            cta="Contact Sales"
-            highlighted={true}
-            features={[
-              "Everything in Pro",
-              "Shared Team Feeds",
-              "Delegation Workflow",
-              "Custom Priority Logic",
-              "SAML / SSO",
-              "Dedicated Account Manager"
-            ]}
-          />
+          <PricingCard tier="Free" isFree cta="Get Started Free" features={["2 Integrations", "50 Messages/mo", "AI Priority Scoring", "Basic Support"]} onClick={() => navigate('/login?mode=signup')} />
+          <PricingCard tier="Pro" price="12" cta="Get Pro" features={["All Integrations", "Unlimited Messages", "AI Priority Scoring", "Quick Actions", "Advanced Search", "Mobile Access"]} onClick={() => navigate('/login?mode=signup')} />
+          <PricingCard tier="SME" price="Custom" cta="Contact Sales" features={["Everything in Pro", "Up to 20 Users", "Team Shared Feeds", "Delegation Workflow", "Priority Support"]} onClick={() => navigate('/login?mode=signup')} />
+          <PricingCard tier="Enterprise" price="Custom" cta="Contact Sales" features={["Everything in SME", "Unlimited Users", "Custom Integrations", "SAML / SSO", "Dedicated Manager", "Analytics"]} onClick={() => navigate('/login?mode=signup')} />
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="landing-footer">
-        <div className="footer-content">
-          <div className="footer-brand">
-            <div className="logo">
-              <div className="logo-icon">P</div>
-              <span className="logo-text">PriorityFlow</span>
-            </div>
-            <p>Mastering your focus, one priority at a time.</p>
+      <footer style={{ padding: '60px 0 40px', borderTop: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '40px', marginBottom: '40px' }}>
+          <div style={{ maxWidth: '300px' }}>
+            <div className="logo" style={{ marginBottom: '16px' }}><div className="logo-icon">C</div><span className="logo-text">Clutsch</span></div>
+            <p className="text-body" style={{ color: 'var(--text-tertiary)' }}>AI-powered prioritization for busy professionals.</p>
           </div>
-          <div className="footer-links">
-            <div className="footer-col">
-              <h5>Product</h5>
-              <a href="#">Features</a>
-              <a href="#">Integrations</a>
-              <a href="#">Pricing</a>
+          <div style={{ display: 'flex', gap: '60px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <h5 className="text-label" style={{ color: 'var(--text-primary)' }}>Product</h5>
+              <button onClick={() => scrollTo('features')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: '15px', textAlign: 'left', padding: 0, fontFamily: 'var(--font-body)' }}>Features</button>
+              <button onClick={() => scrollTo('pricing')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: '15px', textAlign: 'left', padding: 0, fontFamily: 'var(--font-body)' }}>Pricing</button>
+              <button onClick={() => navigate('/login')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: '15px', textAlign: 'left', padding: 0, fontFamily: 'var(--font-body)' }}>Integrations</button>
             </div>
-            <div className="footer-col">
-              <h5>Company</h5>
-              <a href="#">About</a>
-              <a href="#">Privacy</a>
-              <a href="#">Terms</a>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <h5 className="text-label" style={{ color: 'var(--text-primary)' }}>Company</h5>
+              <button onClick={() => navigate('/login')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: '15px', textAlign: 'left', padding: 0, fontFamily: 'var(--font-body)' }}>About</button>
+              <button onClick={() => navigate('/login')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: '15px', textAlign: 'left', padding: 0, fontFamily: 'var(--font-body)' }}>Blog</button>
+              <button onClick={() => navigate('/login')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: '15px', textAlign: 'left', padding: 0, fontFamily: 'var(--font-body)' }}>Contact</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <h5 className="text-label" style={{ color: 'var(--text-primary)' }}>Legal</h5>
+              <button onClick={() => navigate('/login')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: '15px', textAlign: 'left', padding: 0, fontFamily: 'var(--font-body)' }}>Privacy Policy</button>
+              <button onClick={() => navigate('/login')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: '15px', textAlign: 'left', padding: 0, fontFamily: 'var(--font-body)' }}>Terms of Service</button>
+              <button onClick={() => navigate('/login')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: '15px', textAlign: 'left', padding: 0, fontFamily: 'var(--font-body)' }}>Cookie Policy</button>
             </div>
           </div>
         </div>
-        <div className="footer-bottom">
-          <p>&copy; 2026 PriorityFlow Inc. All rights reserved.</p>
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <p className="text-caption" style={{ color: 'var(--text-tertiary)' }}>&copy; 2026 Clutsch. All rights reserved.</p>
+          <div style={{ display: 'flex', gap: '16px' }}>
+            <a className="btn btn-ghost btn-sm" style={{ padding: '8px' }}><GitHubIcon /></a>
+            <a className="btn btn-ghost btn-sm" style={{ padding: '8px' }}><TwitterIcon /></a>
+            <a className="btn btn-ghost btn-sm" style={{ padding: '8px' }}><LinkedInIcon /></a>
+          </div>
         </div>
       </footer>
     </div>
   );
-};
-
-export default LandingPage;
+}

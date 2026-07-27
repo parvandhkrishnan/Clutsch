@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, User, Shield, Clock, Send, Loader2 } from 'lucide-react';
 import api from '../utils/api';
+import { showToast } from '../utils/toast';
+import useFocusTrap from '../utils/useFocusTrap';
 
 const DelegationModal = ({ isOpen, onClose, item, onDelegate }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -9,6 +11,7 @@ const DelegationModal = ({ isOpen, onClose, item, onDelegate }) => {
   const [note, setNote] = useState('');
   const [members, setMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
+  const focusTrap = useFocusTrap(isOpen);
 
   useEffect(() => {
     if (isOpen) {
@@ -18,7 +21,7 @@ const DelegationModal = ({ isOpen, onClose, item, onDelegate }) => {
           const data = await api.get('/team/members');
           setMembers(data);
         } catch (err) {
-          console.error("Failed to fetch team members:", err);
+          // Silently fail — non-critical
         } finally {
           setLoadingMembers(false);
         }
@@ -47,22 +50,21 @@ const DelegationModal = ({ isOpen, onClose, item, onDelegate }) => {
       onDelegate(item.id, selectedMember, note);
       onClose();
     } catch (err) {
-      console.error("Delegation failed:", err);
-      alert("Failed to delegate item. Please try again.");
+      showToast("Failed to delegate item. Please try again.", "error");
     } finally {
       setDelegating(false);
     }
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={onClose} aria-modal="true" role="dialog" aria-label="Delegate item">
       <div className="modal-content delegation-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-title-area">
             <Shield size={20} className="modal-icon" />
             <h2>Delegate Item</h2>
           </div>
-          <button className="close-btn" onClick={onClose}><X size={20} /></button>
+          <button className="close-btn" onClick={onClose} aria-label="Close"><X size={20} /></button>
         </div>
 
         <div className="modal-body">
@@ -79,12 +81,13 @@ const DelegationModal = ({ isOpen, onClose, item, onDelegate }) => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               autoFocus
+              aria-label="Search team members"
             />
           </div>
 
-          <div className="team-list">
+          <div className="team-list" role="listbox" aria-label="Team members">
             {loadingMembers ? (
-              <div className="loading-state">
+              <div className="loading-state" role="status">
                 <Loader2 size={24} className="spin" />
                 <p>Loading team...</p>
               </div>
@@ -94,6 +97,10 @@ const DelegationModal = ({ isOpen, onClose, item, onDelegate }) => {
                   key={member.id} 
                   className={`team-member-card ${selectedMember?.id === member.id ? 'selected' : ''}`}
                   onClick={() => setSelectedMember(member)}
+                  role="option"
+                  aria-selected={selectedMember?.id === member.id}
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedMember(member); } }}
                 >
                   <div className="member-avatar">{member.avatar || member.username?.substring(0, 2).toUpperCase()}</div>
                   <div className="member-info">
@@ -112,15 +119,16 @@ const DelegationModal = ({ isOpen, onClose, item, onDelegate }) => {
                 </div>
               ))
             ) : (
-              <div className="empty-state">
+              <div className="empty-state" role="status">
                 <p>No matching members found.</p>
               </div>
             )}
           </div>
 
           <div className="delegation-note">
-            <label>Add a note (optional)</label>
+            <label htmlFor="delegation-note">Add a note (optional)</label>
             <textarea 
+              id="delegation-note"
               placeholder="Context for the team member..."
               value={note}
               onChange={(e) => setNote(e.target.value)}

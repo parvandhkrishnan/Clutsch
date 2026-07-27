@@ -14,8 +14,9 @@ import {
   Loader2,
   LayoutGrid
 } from 'lucide-react';
+import { showToast } from '../utils/toast';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+const API_BASE_URL = '';
 
 const Settings = () => {
   const { token } = useAuth();
@@ -36,12 +37,11 @@ const Settings = () => {
     try {
       const data = await api.get('/dpdp/consent');
       if (data.consent_history && data.consent_history.length > 0) {
-        // The task implies the latest record determines status
         const latest = data.consent_history[data.consent_history.length - 1];
         setConsent(latest.version !== 'withdrawn');
       }
     } catch (err) {
-      console.error("Failed to fetch consent status:", err);
+      // Silently fail — non-critical consent fetch
     }
   }, []);
 
@@ -68,7 +68,6 @@ const Settings = () => {
       setConsentStatus(newValue ? 'Consent granted' : 'Consent withdrawn');
       setTimeout(() => setConsentStatus(''), 3000);
     } catch (err) {
-      console.error("Consent update failed:", err);
       setConsentStatus('Update failed');
       setTimeout(() => setConsentStatus(''), 3000);
     } finally {
@@ -80,10 +79,9 @@ const Settings = () => {
     try {
       await api.post('/dpdp/nominate', nominee);
       setShowNominateModal(false);
-      alert("Nominee registered successfully.");
+      showToast("Nominee registered successfully.", "success");
     } catch (err) {
-      console.error("Nomination failed:", err);
-      alert("Failed to register nominee.");
+      showToast("Failed to register nominee.", "error");
     }
   };
 
@@ -92,10 +90,9 @@ const Settings = () => {
       await api.post('/dpdp/grievance', grievance);
       setShowGrievanceModal(false);
       setGrievance({ subject: 'Data Access', description: '' });
-      alert("Grievance logged. We will respond within 7 days.");
+      showToast("Grievance logged. We will respond within 7 days.", "success");
     } catch (err) {
-      console.error("Grievance failed:", err);
-      alert("Failed to log grievance.");
+      showToast("Failed to log grievance.", "error");
     }
   };
 
@@ -107,14 +104,13 @@ const Settings = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `priorityflow-export-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `Clutsch-export-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       setExportStatus('Export started!');
       setTimeout(() => setExportStatus(''), 5000);
     } catch (err) {
-      console.error("Export failed:", err);
       setExportStatus('Export failed. Please try again.');
     }
   };
@@ -123,14 +119,13 @@ const Settings = () => {
     if (window.confirm("ARE YOU ABSOLUTELY SURE? This will permanently delete your account and all associated data. This action cannot be undone.")) {
       try {
         await api.delete('/privacy/account');
-        alert("Account deleted successfully.");
+        showToast("Account deleted successfully.", "success");
         // Logout will happen automatically if api utility handles 401 on next request,
         // but let's be explicit.
         localStorage.clear();
         window.location.href = '/login';
       } catch (err) {
-        console.error("Deletion failed:", err);
-        alert("Failed to delete account. Please contact support.");
+        showToast("Failed to delete account. Please contact support.", "error");
       }
     }
   };
@@ -140,10 +135,8 @@ const Settings = () => {
       const data = await api.get('/preferences/contacts');
       setPriorities(data);
     } catch (err) {
-      console.error("Failed to fetch contact priorities:", err);
       // Fallback to mock if API not ready
       if (err.status === 404) {
-        console.warn("Contact priorities API not found, using mock data");
         setPriorities({
           gmail: { 'boss@company.com': 'high' },
           slack: { 'u123': 'high', 'u456': 'medium' }
@@ -166,7 +159,6 @@ const Settings = () => {
       setNewContact({ platform: 'gmail', handle: '', priority: 'high' });
       fetchPriorities();
     } catch (err) {
-      console.error("Add failed:", err);
       // Mock update for demonstration
       const platform = newContact.platform;
       setPriorities(prev => ({
@@ -185,7 +177,6 @@ const Settings = () => {
       await api.delete(`/preferences/contacts/${platform}/${handle}`);
       fetchPriorities();
     } catch (err) {
-      console.error("Delete failed:", err);
       // Mock update
       setPriorities(prev => {
         const updated = { ...prev };
@@ -327,7 +318,7 @@ const Settings = () => {
                     <p>Contact our Data Protection Officer for any privacy concerns.</p>
                     <div className="dpo-details">
                       <strong>DPO:</strong> Privacy Team<br />
-                      <strong>Email:</strong> dpo@priorityflow.com<br />
+                      <strong>Email:</strong> dpo@clutsch.com<br />
                       <strong>Response Time:</strong> Within 7 days
                     </div>
                   </div>
@@ -376,7 +367,7 @@ const Settings = () => {
               <div className="form-group">
                 <label>Platform</label>
                 <select 
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)' }}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}
                   value={newContact.platform}
                   onChange={e => setNewContact({...newContact, platform: e.target.value})}
                 >
@@ -398,7 +389,7 @@ const Settings = () => {
               <div className="form-group">
                 <label>Priority Level</label>
                 <select 
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)' }}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}
                   value={newContact.priority}
                   onChange={e => setNewContact({...newContact, priority: e.target.value})}
                 >
@@ -472,7 +463,7 @@ const Settings = () => {
               <div className="form-group">
                 <label>Subject</label>
                 <select 
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)' }}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}
                   value={grievance.subject}
                   onChange={e => setGrievance({...grievance, subject: e.target.value})}
                 >
@@ -488,7 +479,7 @@ const Settings = () => {
                 <label>Description of Concern</label>
                 <textarea 
                   rows="4"
-                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', resize: 'vertical' }}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--glass-border)', resize: 'vertical' }}
                   value={grievance.description}
                   onChange={e => setGrievance({...grievance, description: e.target.value})}
                   placeholder="Please provide details about your concern..."

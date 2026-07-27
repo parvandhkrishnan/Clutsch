@@ -1,0 +1,77 @@
+{
+  "dpa": {
+    "title": "Data Processing Agreement",
+    "version": "1.0",
+    "effective_date": "2026-07-10",
+    "parties": {
+      "controller": {
+        "name": "[Customer Name]",
+        "role": "Data Controller",
+        "description": "The entity that determines the purposes and means of processing personal data."
+      },
+      "processor": {
+        "name": "Clutsch Inc.",
+        "role": "Data Processor",
+        "address": "[Registered Address]",
+        "description": "The entity that processes personal data on behalf of the Controller."
+      }
+    },
+    "scope": {
+      "description": "This DPA governs the processing of personal data by Clutsch on behalf of the Customer in connection with the Clutsch unified communication dashboard service.",
+      "duration": "The term of the agreement between Customer and Clutsch, plus any period during which Clutsch retains personal data per the Customer's instructions."
+    },
+    "processing_details": {
+      "nature_and_purpose": "AI-driven prioritization, aggregation, and summarization of communications (emails, messages, tasks) from connected platforms.",
+      "categories_of_data_subjects": "Customer's employees, contractors, and other users authorized by Customer to use the Clutsch service.",
+      "categories_of_personal_data": [
+        "Email addresses and user names",
+        "Message content from connected platforms (email, Slack, Teams, etc.)",
+        "Task metadata and descriptions",
+        "OAuth tokens and integration credentials (encrypted at rest)",
+        "Usage analytics and interaction data",
+        "AI-generated priority scores and summaries"
+      ],
+      "special_categories_of_data": "None intentionally collected. Controller is responsible for ensuring no special category data is uploaded."
+    },
+    "obligations_of_processor": {
+      "confidentiality": "Clutsch ensures all personnel with access to personal data are bound by confidentiality obligations.",
+      "security_measures": [
+        "Encryption at rest (AES-256 via Fernet)",
+        "Encryption in transit (TLS 1.2+)",
+        "Rate limiting and brute-force protection",
+        "Multi-factor authentication (MFA)",
+        "Regular security audits and penetration testing",
+        "Access control with least-privilege principle"
+      ],
+      "data_breach_notification": "Clutsch will notify the Controller within 48 hours of becoming aware of a personal data breach.",
+      "subprocessors": "See subprocessor list below. Controller will be notified of any changes.",
+      "data_subject_rights": "Clutsch will assist the Controller in fulfilling data subject rights (access, rectification, erasure, portability, restriction) via the API endpoints documented in the service.",
+      "deletion_or_return": "Upon termination, Clutsch will delete all personal data within 30 days unless retention is required by law."
+    },
+    "subprocessors": [
+      {
+        "name": "Razorpay",
+        "purpose": "Payment processing for subscriptions",
+        "location": "India",
+        "data_processed": "Billing name, email address, payment amount (no full card numbers stored)"
+      },
+      {
+        "name": "Google Cloud Platform (GCP)",
+        "purpose": "Cloud infrastructure, data storage, and AI model inference",
+        "location": "Global (us-central1 primary)",
+        "data_processed": "All data processed by the Clutsch service"
+      },
+      {
+        "name": "Auth0 / Custom OAuth Providers",
+        "purpose": "Authentication and SSO integration",
+        "location": "Varies by provider",
+        "data_processed": "Email address, SSO profile information"
+      }
+    ],
+    "governing_law": "This DPA shall be governed by the laws of [Jurisdiction].",
+    "contact": {
+      "dpo": "dpo@clutsch.com",
+      "security": "security@clutsch.com"
+    }
+  }
+}

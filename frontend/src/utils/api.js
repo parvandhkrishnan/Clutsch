@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+const API_BASE_URL = '';
 
 class ApiError extends Error {
   constructor(message, status, data) {
@@ -63,7 +63,7 @@ export const request = async (endpoint, options = {}) => {
       // If refresh fails or no refresh token, logout
       localStorage.removeItem('token');
       localStorage.removeItem('refresh_token');
-      window.location.href = '/login';
+      window.location.hash = '#/login';
       throw new ApiError('Unauthorized', 401);
     }
 

@@ -4,6 +4,8 @@ import { Joyride } from 'react-joyride';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import DelegationModal from '../components/DelegationModal';
+import useWebSocket from '../utils/useWebSocket';
+import { showToast, registerToastHandler, ToastContainer } from '../utils/toast';
 import { 
   MessageSquare, 
   Mail, 
@@ -22,7 +24,8 @@ import {
   Lightbulb,
   Filter,
   Shield,
-  UserPlus
+  UserPlus,
+  X
 } from 'lucide-react';
 
 const getSourceIcon = (source) => {
@@ -56,7 +59,6 @@ const PriorityGauge = ({ score }) => {
           className="gauge-bg"
           cx="50" cy="50" r={radius} 
           fill="transparent" 
-          stroke="#e2e8f0" 
           strokeWidth="8"
         />
         <circle 
@@ -70,7 +72,7 @@ const PriorityGauge = ({ score }) => {
           strokeLinecap="round"
           transform="rotate(-90 50 50)"
         />
-        <text x="50" y="55" textAnchor="middle" fontSize="20" fontWeight="bold" fill="var(--text-main)">
+        <text x="50" y="55" textAnchor="middle" fontSize="20" fontWeight="bold" fill="var(--text-primary)">
           {Math.round(score)}
         </text>
       </svg>
@@ -78,7 +80,7 @@ const PriorityGauge = ({ score }) => {
   );
 };
 
-const ActionableItem = ({ item, isSelected, onSelect }) => {
+const ActionableItem = ({ item, isSelected, onSelect, onToggleSelect, showCheckbox }) => {
   const SourceIcon = getSourceIcon(item.source);
   
   const presence = item.presence || [];
@@ -97,6 +99,16 @@ const ActionableItem = ({ item, isSelected, onSelect }) => {
         }
       }}
     >
+      {showCheckbox && (
+        <div className="item-checkbox" onClick={(e) => { e.stopPropagation(); onToggleSelect(item); }}>
+          <input 
+            type="checkbox" 
+            checked={isSelected} 
+            onChange={() => onToggleSelect(item)}
+            aria-label={`Select item: ${item.text}`}
+          />
+        </div>
+      )}
       <div className="item-header">
         <div className="item-source">
           <SourceIcon size={14} />
@@ -260,6 +272,7 @@ const FocusPanel = ({ item, onArchive, onSnooze, onOpen, onDelegate, presence = 
 
 const Dashboard = () => {
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
   const [runTour, setRunTour] = useState(false);
   const [items, setItems] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -267,9 +280,30 @@ const Dashboard = () => {
   const [toast, setToast] = useState(null);
   const [selectedTier, setSelectedTier] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState('personal'); // 'personal' or 'team'
+  const [sourceFilter, setSourceFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
+  const [scoreThreshold, setScoreThreshold] = useState(0);
+  const [viewMode, setViewMode] = useState('personal');
   const [isDelegationModalOpen, setIsDelegationModalOpen] = useState(false);
   const [itemPresence, setItemPresence] = useState([]);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
+
+  // Register toast handler
+  useEffect(() => {
+    registerToastHandler((msg, type) => {
+      setToast({ message: msg, type: type || 'success' });
+      setTimeout(() => setToast(null), 3000);
+    });
+  }, []);
+
+  // WebSocket for real-time updates
+  useWebSocket('t-acme', user?.id || 'anonymous', (data) => {
+    if (data.type === 'feed_update') {
+      fetchItems();
+    }
+  });
 
   const tourSteps = [
     {
@@ -301,17 +335,53 @@ const Dashboard = () => {
   }, [searchParams]);
 
   const tiers = ['all', 'urgent', 'high', 'medium', 'low'];
+  const sources = ['all', 'slack', 'gmail', 'outlook', 'teams', 'jira', 'whatsapp'];
+  const dateRanges = [
+    { value: 'all', label: 'All time' },
+    { value: '24h', label: 'Past 24h' },
+    { value: '7d', label: 'Past 7 days' },
+    { value: '30d', label: 'Past 30 days' }
+  ];
+
+  const getDateCutoff = (range) => {
+    const now = Date.now();
+    switch (range) {
+      case '24h': return now - 24 * 60 * 60 * 1000;
+      case '7d': return now - 7 * 24 * 60 * 60 * 1000;
+      case '30d': return now - 30 * 24 * 60 * 60 * 1000;
+      default: return 0;
+    }
+  };
 
   const filteredItems = items.filter(item => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      item.text?.toLowerCase().includes(query) ||
-      item.source?.toLowerCase().includes(query) ||
-      item.ai_summary?.toLowerCase().includes(query) ||
-      item.explanation?.toLowerCase().includes(query)
-    );
+    // Keyword search
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      if (!(item.text?.toLowerCase().includes(query) ||
+            item.source?.toLowerCase().includes(query) ||
+            item.ai_summary?.toLowerCase().includes(query) ||
+            item.explanation?.toLowerCase().includes(query))) {
+        return false;
+      }
+    }
+    // Source filter
+    if (sourceFilter !== 'all' && item.source?.toLowerCase() !== sourceFilter) {
+      return false;
+    }
+    // Date range filter
+    if (dateFilter !== 'all') {
+      const cutoff = getDateCutoff(dateFilter);
+      const itemTime = (item.timestamp || 0) * 1000;
+      if (itemTime < cutoff) return false;
+    }
+    // Score threshold
+    if ((item.priorityScore || 0) < scoreThreshold) {
+      return false;
+    }
+    return true;
   });
+
+  const availableSources = ['all', ...new Set(items.map(i => i.source?.toLowerCase()).filter(Boolean))];
 
   const fetchItems = useCallback(async () => {
     try {
@@ -324,12 +394,84 @@ const Dashboard = () => {
       
       const data = await api.get(url);
       setItems(data);
+      setInitialLoad(false);
     } catch (err) {
-      console.error("Failed to fetch items:", err);
+      // Silently fail — polling will retry
     } finally {
       setLoading(false);
     }
   }, [selectedTier, viewMode]);
+
+  // Bulk actions
+  const toggleSelectItem = (item) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(item.id)) {
+        next.delete(item.id);
+      } else {
+        next.add(item.id);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredItems.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredItems.map(i => i.id)));
+    }
+  };
+
+  const handleBulkArchive = async () => {
+    if (selectedIds.size === 0) return;
+    setBulkActionLoading(true);
+    try {
+      await api.post('/items/bulk/archive', { item_ids: Array.from(selectedIds) });
+      setItems(prev => prev.filter(i => !selectedIds.has(i.id)));
+      showToast(`Archived ${selectedIds.size} items`, 'success');
+      setSelectedIds(new Set());
+    } catch (err) {
+      // Fallback: archive one by one
+      let successCount = 0;
+      for (const id of selectedIds) {
+        try {
+          await api.post(`/items/${id}/archive`);
+          successCount++;
+        } catch (e) { /* skip */ }
+      }
+      setItems(prev => prev.filter(i => !selectedIds.has(i.id)));
+      showToast(`Archived ${successCount} items`, 'success');
+      setSelectedIds(new Set());
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkSnooze = async (duration = 60) => {
+    if (selectedIds.size === 0) return;
+    setBulkActionLoading(true);
+    try {
+      await api.post('/items/bulk/snooze', { item_ids: Array.from(selectedIds), hours: duration / 60 });
+      setItems(prev => prev.filter(i => !selectedIds.has(i.id)));
+      showToast(`Snoozed ${selectedIds.size} items for ${duration}m`, 'success');
+      setSelectedIds(new Set());
+    } catch (err) {
+      // Fallback: snooze one by one
+      let successCount = 0;
+      for (const id of selectedIds) {
+        try {
+          await api.post(`/items/${id}/snooze`, { hours: duration / 60 });
+          successCount++;
+        } catch (e) { /* skip */ }
+      }
+      setItems(prev => prev.filter(i => !selectedIds.has(i.id)));
+      showToast(`Snoozed ${successCount} items`, 'success');
+      setSelectedIds(new Set());
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -353,7 +495,7 @@ const Dashboard = () => {
         const data = await api.get(`/team/items/${selectedItem.id}/presence`);
         setItemPresence(data);
       } catch (err) {
-        console.error("Presence fetch failed:", err);
+        // Silently fail
       }
     };
 
@@ -380,7 +522,7 @@ const Dashboard = () => {
       setItems(prev => prev.filter(i => i.id !== id));
       showToast("Item archived");
     } catch (err) {
-      console.error("Archive failed:", err);
+      showToast("Failed to archive item", "error");
     }
   };
 
@@ -390,7 +532,7 @@ const Dashboard = () => {
       setItems(prev => prev.filter(i => i.id !== id));
       showToast(`Snoozed for ${duration}m`);
     } catch (err) {
-      console.error("Snooze failed:", err);
+      showToast("Failed to snooze item", "error");
     }
   };
 
@@ -426,72 +568,178 @@ const Dashboard = () => {
         }}
       />
       <section className="actionable-items-list">
-        <div className="section-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <h2>Priority Feed</h2>
-            {loading && <Loader2 className="spin" size={18} />}
+        <div className="section-header" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h2 style={{ margin: 0, fontSize: '1.1rem' }}>Priority Feed</h2>
+            {loading && <Loader2 className="spin" size={16} />}
           </div>
+          <input 
+            type="text" 
+            placeholder="Search..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ flex: 1, minWidth: '140px', maxWidth: '260px', padding: '6px 12px', borderRadius: '9999px', border: '1px solid var(--glass-border)', background: 'var(--glass-fill)', backdropFilter: 'blur(12px)', fontSize: '0.8rem', fontFamily: 'var(--font-family)', color: 'var(--text-primary)', outline: 'none' }}
+            aria-label="Search items"
+          />
           <span className="item-count">{filteredItems.length} items</span>
         </div>
 
-        <div className="feed-controls" style={{ padding: '0 16px 16px' }}>
-          <div className="view-toggle glass">
+        {/* Compact filter bar */}
+        <div className="feed-controls" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center', padding: '0 0 8px 0' }}>
+          <div className="view-toggle" style={{ display: 'flex', borderRadius: '9999px', background: 'var(--glass-fill)', backdropFilter: 'blur(12px)', border: '1px solid var(--glass-border)', overflow: 'hidden', flexShrink: 0 }}>
             <button 
               className={`toggle-btn ${viewMode === 'personal' ? 'active' : ''}`}
               onClick={() => setViewMode('personal')}
+              style={{ padding: '4px 12px', fontSize: '0.75rem', border: 'none', background: viewMode === 'personal' ? 'var(--accent)' : 'transparent', color: viewMode === 'personal' ? '#fff' : 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font-family)', fontWeight: 500, transition: 'all 0.2s' }}
             >
               Personal
             </button>
             <button 
               className={`toggle-btn ${viewMode === 'team' ? 'active' : ''}`}
               onClick={() => setViewMode('team')}
+              style={{ padding: '4px 12px', fontSize: '0.75rem', border: 'none', background: viewMode === 'team' ? 'var(--accent)' : 'transparent', color: viewMode === 'team' ? '#fff' : 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font-family)', fontWeight: 500, transition: 'all 0.2s' }}
             >
-              Team Feed
+              Team
             </button>
           </div>
 
-          <div className="search-bar" style={{ marginBottom: '12px' }}>
+          {/* Source filter */}
+          <div className="filter-row" style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {availableSources.map(src => (
+              <button 
+                key={src}
+                className={`tier-chip ${sourceFilter === src ? 'active' : ''}`}
+                onClick={() => setSourceFilter(src)}
+                style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '9999px', border: '1px solid var(--glass-border)', background: sourceFilter === src ? 'var(--accent)' : 'var(--glass-fill)', color: sourceFilter === src ? '#fff' : 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font-family)', transition: 'all 0.2s', backdropFilter: 'blur(8px)' }}
+              >
+                {src === 'all' ? 'All' : src.charAt(0).toUpperCase() + src.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {/* Date range filter */}
+          <div className="filter-row" style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {dateRanges.map(dr => (
+              <button 
+                key={dr.value}
+                className={`tier-chip ${dateFilter === dr.value ? 'active' : ''}`}
+                onClick={() => setDateFilter(dr.value)}
+                style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '9999px', border: '1px solid var(--glass-border)', background: dateFilter === dr.value ? 'var(--accent)' : 'var(--glass-fill)', color: dateFilter === dr.value ? '#fff' : 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font-family)', transition: 'all 0.2s', backdropFilter: 'blur(8px)' }}
+              >
+                {dr.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Score threshold */}
+          <div className="filter-row" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{scoreThreshold}+</span>
             <input 
-              type="text" 
-              placeholder="Search items..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}
+              type="range" 
+              min="0" max="100" step="5"
+              value={scoreThreshold}
+              onChange={(e) => setScoreThreshold(Number(e.target.value))}
+              style={{ width: '60px', height: '4px', accentColor: 'var(--accent)' }}
+              aria-label={`Minimum priority score: ${scoreThreshold}`}
             />
           </div>
-          <div className="feed-filters">
+
+          {/* Tier filter */}
+          <div className="feed-filters" style={{ display: 'flex', gap: '3px' }}>
             {tiers.map(tier => (
               <button 
                 key={tier}
                 className={`tier-chip ${selectedTier === tier ? 'active' : ''} ${tier}`}
                 onClick={() => setSelectedTier(tier)}
+                style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '9999px', border: '1px solid var(--glass-border)', background: selectedTier === tier ? 'var(--accent)' : 'var(--glass-fill)', color: selectedTier === tier ? '#fff' : 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font-family)', transition: 'all 0.2s', backdropFilter: 'blur(8px)', textTransform: 'capitalize' }}
               >
                 {tier}
               </button>
             ))}
           </div>
+
+          {/* Select All */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
+            <input 
+              type="checkbox" 
+              checked={selectedIds.size > 0 && selectedIds.size === filteredItems.length}
+              onChange={toggleSelectAll}
+              style={{ accentColor: 'var(--accent)', width: '14px', height: '14px', cursor: 'pointer' }}
+              aria-label="Select all items"
+            />
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+              {selectedIds.size > 0 ? `${selectedIds.size}` : ''}
+            </span>
+          </div>
         </div>
+
+        {/* Bulk action toolbar */}
+        {selectedIds.size > 0 && (
+          <div className="bulk-action-bar" style={{
+            position: 'sticky', bottom: 0, left: 0, right: 0,
+            background: 'rgba(30, 41, 59, 0.95)', backdropFilter: 'blur(12px)',
+            padding: '12px 16px', display: 'flex', gap: '8px', alignItems: 'center',
+            borderTop: '1px solid var(--glass-border)', zIndex: 10
+          }}>
+            <span style={{ color: 'var(--text-primary)', fontSize: '0.85rem', marginRight: 'auto' }}>
+              {selectedIds.size} selected
+            </span>
+            <button className="btn btn-primary btn-sm" onClick={handleBulkArchive} disabled={bulkActionLoading}>
+              {bulkActionLoading ? <Loader2 className="spin" size={16} /> : <Check size={16} />}
+              <span>Archive</span>
+            </button>
+            <button className="btn btn-secondary btn-sm" onClick={() => handleBulkSnooze(60)} disabled={bulkActionLoading}>
+              <Clock size={16} />
+              <span>Snooze 1h</span>
+            </button>
+            <button className="btn btn-secondary btn-sm" onClick={() => handleBulkSnooze(240)} disabled={bulkActionLoading}>
+              <Clock size={16} />
+              <span>Snooze 4h</span>
+            </button>
+            <button className="btn btn-secondary btn-sm" onClick={() => setSelectedIds(new Set())}>
+              <X size={16} />
+              <span>Cancel</span>
+            </button>
+          </div>
+        )}
 
         <div className="items-scroll">
           {filteredItems.map(item => (
             <ActionableItem 
               key={item.id} 
               item={item} 
-              isSelected={selectedItem?.id === item.id}
+              isSelected={selectedIds.has(item.id) || selectedItem?.id === item.id}
               onSelect={setSelectedItem}
+              onToggleSelect={toggleSelectItem}
+              showCheckbox={true}
             />
           ))}
-          {!loading && filteredItems.length === 0 && (
-            <div className="empty-msg" style={{ textAlign: 'center', padding: '40px 20px' }}>
+          {loading && initialLoad && (
+            <div className="loading-state" style={{ textAlign: 'center', padding: '60px 20px' }} role="status">
+              <Loader2 size={48} className="spin" style={{ color: 'var(--primary-blue)', marginBottom: '16px' }} />
+              <p style={{ color: 'var(--text-muted)' }}>Loading your priority feed...</p>
+            </div>
+          )}
+          {!loading && !initialLoad && filteredItems.length === 0 && (
+            <div className="empty-msg" style={{ textAlign: 'center', padding: '60px 20px' }} role="status">
               <Check size={48} style={{ color: 'var(--success-green)', marginBottom: '16px' }} />
               <p>
-                {searchQuery 
-                  ? `No results for "${searchQuery}"`
+                {searchQuery || sourceFilter !== 'all' || dateFilter !== 'all' || scoreThreshold > 0
+                  ? `No items match your filters. Try adjusting your search criteria.`
                   : viewMode === 'team' 
                     ? "No high-priority team items at the moment."
                     : `All clear in the ${selectedTier} tier!`
                 }
               </p>
+              {(searchQuery || sourceFilter !== 'all' || dateFilter !== 'all' || scoreThreshold > 0) && (
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  style={{ marginTop: '12px' }}
+                  onClick={() => { setSearchQuery(''); setSourceFilter('all'); setDateFilter('all'); setScoreThreshold(0); }}
+                >
+                  Clear Filters
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -515,11 +763,7 @@ const Dashboard = () => {
         onDelegate={handleDelegate}
       />
 
-      {toast && (
-        <div className="toast-container">
-          <div className="toast">{toast}</div>
-        </div>
-      )}
+      <ToastContainer toast={toast} onClear={() => setToast(null)} />
     </div>
   );
 };

@@ -326,7 +326,7 @@ const SSOConfig = () => {
             <div className="form-group">
               <label><Database size={16} /> SSO URL (ACS)</label>
               <div className="input-with-copy">
-                <input type="text" value="https://api.priorityflow.com/auth/sso/saml/acs" readOnly className="glass-input" />
+                <input type="text" value="https://api.clutsch.com/auth/sso/saml/acs" readOnly className="glass-input" />
               </div>
             </div>
             <div className="cert-section">
@@ -927,8 +927,8 @@ const CustomConnectors = () => {
                   <FileCode size={20} className="text-purple" />
                   <h3 style={{ margin: 0 }}>Data Mapping Normalizer</h3>
                 </div>
-                <p className="card-desc">Map JSON response keys to PriorityFlow schema fields.</p>
-                <div className="mapping-grid" style={{ background: 'rgba(0,0,0,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                <p className="card-desc">Map JSON response keys to Clutsch schema fields.</p>
+                <div className="mapping-grid" style={{ background: 'rgba(0,0,0,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
                   {Object.entries(formData.mapping).map(([target, source]) => (
                     <div key={target} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                       <div style={{ flex: 1, fontWeight: 600, color: 'var(--text-muted)' }}>{target.toUpperCase()}</div>

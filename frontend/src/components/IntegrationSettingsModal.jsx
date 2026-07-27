@@ -49,7 +49,7 @@ const IntegrationSettingsModal = ({ isOpen, onClose, integration, onSave, onDisc
               <div>
                 <h4 style={{ margin: '0 0 4px 0' }}>Enable Integration</h4>
                 <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                  Allow PriorityFlow to process data from this source.
+                  Allow Clutsch to process data from this source.
                 </p>
               </div>
               <label className="switch">
@@ -88,7 +88,7 @@ const IntegrationSettingsModal = ({ isOpen, onClose, integration, onSave, onDisc
                   width: '100%', 
                   padding: '10px', 
                   borderRadius: '8px', 
-                  border: '1px solid var(--border-color)',
+                  border: '1px solid var(--glass-border)',
                   backgroundColor: 'white'
                 }} 
                 value={settings.syncFrequency}
@@ -118,7 +118,7 @@ const IntegrationSettingsModal = ({ isOpen, onClose, integration, onSave, onDisc
             </div>
           </div>
 
-          <div className="danger-zone-settings" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '24px', marginTop: '8px' }}>
+          <div className="danger-zone-settings" style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '24px', marginTop: '8px' }}>
             <h4 style={{ color: '#ef4444', margin: '0 0 16px 0' }}>Danger Zone</h4>
             <button 
               className="btn btn-secondary" 
@@ -139,7 +139,7 @@ const IntegrationSettingsModal = ({ isOpen, onClose, integration, onSave, onDisc
           </div>
         </div>
 
-        <div className="modal-footer" style={{ borderTop: '1px solid var(--border-color)', padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+        <div className="modal-footer" style={{ borderTop: '1px solid var(--glass-border)', padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
           <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
           <button 
             className="btn btn-primary" 

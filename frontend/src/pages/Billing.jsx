@@ -11,16 +11,23 @@ import {
   Loader2
 } from 'lucide-react';
 import api from '../utils/api';
+import { showToast } from '../utils/toast';
 
-const PlanCard = ({ title, price, features, isPro, isEnterprise, current, onUpgrade, loading }) => (
-  <div className={`card billing-plan-card glass-effect ${isEnterprise ? 'enterprise-highlight' : ''}`}>
-    {isEnterprise && <div className="enterprise-badge">MOST POPULAR</div>}
+const PlanCard = ({ title, price, features, highlighted, cta, isCustom, current, onUpgrade, loading }) => (
+  <div className={`card billing-plan-card glass-effect ${highlighted ? 'enterprise-highlight' : ''}`}>
+    {highlighted && <div className="enterprise-badge">RECOMMENDED</div>}
     <div className="plan-header">
       <h3>{title}</h3>
       <div className="plan-price">
-        <span className="currency">$</span>
-        <span className="amount">{price}</span>
-        <span className="period">/mo</span>
+        {isCustom ? (
+          <span className="amount">Custom</span>
+        ) : (
+          <>
+            <span className="currency">$</span>
+            <span className="amount">{price}</span>
+            <span className="period">/mo</span>
+          </>
+        )}
       </div>
     </div>
     <ul className="plan-features">
@@ -32,11 +39,11 @@ const PlanCard = ({ title, price, features, isPro, isEnterprise, current, onUpgr
       ))}
     </ul>
     <button 
-      className={`btn plan-btn ${current ? 'current-btn' : (isEnterprise ? 'btn-primary' : 'btn-secondary')}`}
+      className={`btn plan-btn ${current ? 'current-btn' : (highlighted ? 'btn-primary' : 'btn-secondary')}`}
       onClick={() => !current && onUpgrade(title)}
       disabled={current || loading}
     >
-      {loading ? <Loader2 className="spin" size={18} /> : (current ? 'Current Plan' : (isEnterprise ? 'Upgrade to Enterprise' : 'Get Pro'))}
+      {loading ? <Loader2 className="spin" size={18} /> : (current ? 'Current Plan' : cta)}
       {!current && !loading && <ArrowRight size={18} />}
     </button>
   </div>
@@ -63,9 +70,9 @@ const UsageBar = ({ label, current, total, colorClass }) => {
 const Billing = () => {
   const [loadingPlan, setLoadingPlan] = useState(null);
   const [history] = useState([
-    { id: 'INV-2024-001', date: 'Jul 01, 2024', amount: '$19.00', status: 'Paid' },
-    { id: 'INV-2024-002', date: 'Jun 01, 2024', amount: '$19.00', status: 'Paid' },
-    { id: 'INV-2024-003', date: 'May 01, 2024', amount: '$19.00', status: 'Paid' },
+    { id: 'INV-2024-001', date: 'Jul 01, 2024', amount: '$12.00', status: 'Paid' },
+    { id: 'INV-2024-002', date: 'Jun 01, 2024', amount: '$12.00', status: 'Paid' },
+    { id: 'INV-2024-003', date: 'May 01, 2024', amount: '$12.00', status: 'Paid' },
   ]);
 
   const handleCheckout = async (planTitle) => {
@@ -80,72 +87,97 @@ const Billing = () => {
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_placeholder', // Should be in env vars
         subscription_id: subscriptionData.subscription_id,
-        name: 'PriorityFlow',
+        name: 'Clutsch',
         description: `${planTitle} Subscription`,
         image: '/logo.png',
         handler: async function (response) {
-          // 3. Verify payment on the backend
-          try {
-            await api.post('/razorpay/verify-payment', {
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_subscription_id: response.razorpay_subscription_id,
-              razorpay_signature: response.razorpay_signature
-            });
-            alert('Subscription successful! Your account has been upgraded.');
-            window.location.reload();
-          } catch (err) {
-            console.error('Payment verification failed', err);
-            alert('Payment verification failed. Please contact support.');
-          }
-        },
-        prefill: {
-          name: subscriptionData.user_name,
-          email: subscriptionData.user_email
-        },
-        theme: {
-          color: '#2563eb'
-        }
-      };
+                      // 3. Verify payment on the backend
+                      try {
+                        await api.post('/razorpay/verify-payment', {
+                          razorpay_payment_id: response.razorpay_payment_id,
+                          razorpay_subscription_id: response.razorpay_subscription_id,
+                          razorpay_signature: response.razorpay_signature
+                        });
+                        showToast('Subscription successful! Your account has been upgraded.', 'success');
+                        window.location.reload();
+                      } catch (err) {
+                        showToast('Payment verification failed. Please contact support.', 'error');
+                      }
+                    },
+                    prefill: {
+                      name: subscriptionData.user_name,
+                      email: subscriptionData.user_email
+                    },
+                    theme: {
+                      color: '#2563eb'
+                    }
+                  };
 
-      const rzp = new window.Razorpay(options);
-      rzp.on('payment.failed', function (response) {
-        alert('Payment failed: ' + response.error.description);
-      });
-      rzp.open();
-    } catch (err) {
-      console.error('Failed to initiate checkout', err);
-      alert('Failed to initiate checkout. Please try again.');
-    } finally {
-      setLoadingPlan(null);
-    }
+                  const rzp = new window.Razorpay(options);
+                  rzp.on('payment.failed', function (response) {
+                    showToast('Payment failed: ' + response.error.description, 'error');
+                  });
+                  rzp.open();
+                } catch (err) {
+                  showToast('Failed to initiate checkout. Please try again.', 'error');
+                } finally {
+                  setLoadingPlan(null);
+                }
   };
 
   const plans = [
     {
-      title: 'Pro',
-      price: '19',
+      title: 'Free',
+      price: '0',
+      cta: 'Downgrade',
       features: [
-        'All Core Integrations',
+        '2 Integrations',
+        '50 Messages/mo',
         'AI Priority Scoring',
-        'Smart Summaries',
-        'Advanced Quick Actions',
-        'Standard Support'
+        'Basic Support'
+      ]
+    },
+    {
+      title: 'Pro',
+      price: '12',
+      cta: 'Get Pro',
+      features: [
+        'All Integrations',
+        'Unlimited Messages',
+        'AI Priority Scoring',
+        'Quick Actions',
+        'Advanced Search',
+        'Mobile Access'
       ],
-      isPro: true,
       current: true
     },
     {
-      title: 'Enterprise',
-      price: '49',
+      title: 'SME',
+      price: 'Custom',
+      isCustom: true,
+      cta: 'Contact Sales',
+      highlighted: true,
       features: [
         'Everything in Pro',
-        'Shared Team Feed',
-        'Team Delegation',
-        'Enterprise Analytics',
-        'Custom Integrations',
+        'Up to 20 Users',
+        'Team Shared Feeds',
+        'Delegation Workflow',
         'Priority Support'
-      ],
-      isEnterprise: true
+      ]
+    },
+    {
+      title: 'Enterprise',
+      price: 'Custom',
+      isCustom: true,
+      cta: 'Contact Sales',
+      features: [
+        'Everything in SME',
+        'Unlimited Users',
+        'Custom Integrations',
+        'SAML / SSO',
+        'Dedicated Manager',
+        'Analytics'
+      ]
     }
   ];
 
@@ -160,7 +192,7 @@ const Billing = () => {
         <div className="billing-main">
           <div className="section-title">
             <h2>Select a Plan</h2>
-            <p>Scale PriorityFlow to your needs.</p>
+            <p>Scale Clutsch to your needs.</p>
           </div>
           <div className="plans-container">
             {plans.map((plan, i) => (

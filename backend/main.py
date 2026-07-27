@@ -1,3 +1,5 @@
+import html
+import re
 import os
 import asyncio
 import datetime
@@ -6,6 +8,7 @@ import logging
 import time
 import json
 from typing import List, Optional, Dict, Set, Any
+from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from fastapi import FastAPI, Body, HTTPException, Query, Depends, BackgroundTasks, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,10 +16,21 @@ from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 
+# Structured logging
+from log_config import setup_logging, LogContext, JSONFormatter
+setup_logging()
+logger = logging.getLogger("priorityflow")
+
+# Strips HTML tags from user input to prevent XSS
+def sanitize_text(text: str) -> str:
+    if not text:
+        return text
+    return html.escape(text.strip())
+
 # Rate Limiting
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from limiter import limiter
 
 # Load environment variables from .env file
 load_dotenv()
@@ -44,17 +58,32 @@ from auth.models import User, Token, get_user_by_username, verify_password, tena
 from auth.dependencies import get_current_active_user, get_admin_user
 from database import db
 
-# Configure Structured Logging
-logging.basicConfig(level=logging.INFO)
+# Configure Structured Logging — now done via log_config.setup_logging()
 logger = logging.getLogger("priorityflow")
 
-# Initialize Rate Limiter
-limiter = Limiter(key_func=get_remote_address)
-app = FastAPI(title="PriorityFlow API", version="0.2.0")
+# Initialize Rate Limiter (shared instance from limiter.py)
+app = FastAPI(
+    title="PriorityFlow API",
+    version="0.2.0",
+    lifespan="auto"
+)
 app.state.limiter = limiter
 if os.environ.get("ENFORCE_HTTPS") == "true":
     app.add_middleware(HTTPSRedirectMiddleware)
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Security Headers Middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' https://checkout.razorpay.com 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'"
+    return response
 
 allow_origins = os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
 app.add_middleware(
@@ -72,6 +101,12 @@ async def periodic_retention_policy():
         db.enforce_retention_policy(days=30)
         await asyncio.sleep(24 * 60 * 60)
 
+async def periodic_db_save():
+    """Auto-save database every 5 minutes to persist data."""
+    while True:
+        await asyncio.sleep(300)  # 5 minutes
+        db.save_to_disk()
+
 def validate_secrets():
     required_secrets = [
         "JWT_SECRET_KEY",
@@ -86,12 +121,20 @@ def validate_secrets():
         logger.error(error_msg)
         raise RuntimeError(error_msg)
 
-@app.on_event("startup")
-async def startup_event():
-    # Validate secrets
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: validate secrets, start background tasks
     validate_secrets()
-    # Start retention policy task
     asyncio.create_task(periodic_retention_policy())
+    asyncio.create_task(periodic_db_save())
+    logger.info(json.dumps({"event": "app_startup", "status": "started"}))
+    yield
+    # Shutdown: wait for background tasks to finish
+    logger.info(json.dumps({"event": "app_shutdown", "status": "shutting_down"}))
+    background_worker.stop()
+    logger.info(json.dumps({"event": "app_shutdown", "status": "completed"}))
+
+app.router.lifespan_context = lifespan
 
 # Custom Middleware for Structured Monitoring & Anomaly Detection
 @app.middleware("http")
@@ -99,15 +142,17 @@ async def audit_log_middleware(request: Request, call_next):
     start_time = time.time()
     request_id = str(uuid.uuid4())
     
+    # Set request_id in the log context for this request
+    LogContext.set_request_id(request_id)
+    
     # Extract client info
     client_host = request.client.host if request.client else "unknown"
     method = request.method
     path = request.url.path
     
-    # Anomaly detection: track repeated failures (simulated with a simple dict for now)
-    # In production, use Redis or similar.
-    
+    # Add request_id to response headers for tracing
     response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
     
     process_time = time.time() - start_time
     status_code = response.status_code
@@ -118,7 +163,7 @@ async def audit_log_middleware(request: Request, call_next):
         "method": method,
         "path": path,
         "status_code": status_code,
-        "latency_ms": process_time * 1000,
+        "latency_ms": round(process_time * 1000, 2),
         "client": client_host
     }
     
@@ -127,10 +172,11 @@ async def audit_log_middleware(request: Request, call_next):
     
     # Anomaly Logging
     if status_code == 401 or status_code == 403:
-        logger.warning(f"SECURITY_ANOMALY: Unauthorized access attempt to {path} from {client_host}")
+        logger.warning(json.dumps({**log_data, "event": "unauthorized_access"}))
     elif status_code == 429:
-        logger.warning(f"SECURITY_ANOMALY: Rate limit exceeded for {path} from {client_host}")
+        logger.warning(json.dumps({**log_data, "event": "rate_limit_exceeded"}))
     
+    LogContext.clear()
     return response
 
 # Include Routers
@@ -153,7 +199,24 @@ app.include_router(realtime_router)
 from workflow_routes import router as workflow_router
 app.include_router(workflow_router)
 from feedback_routes import router as feedback_router
+
 app.include_router(feedback_router)
+from mfa_routes import router as mfa_router
+app.include_router(mfa_router)
+
+# Compliance routes — DPDP (India), GDPR (EU), CCPA/CPRA (California)
+from gdpr_routes import router as gdpr_router
+app.include_router(gdpr_router)
+from ccpa_routes import router as ccpa_router
+app.include_router(ccpa_router)
+
+@app.get("/.well-known/security.txt")
+async def security_txt():
+    return Response(
+        content="Contact: mailto:security@clutsch.com\nExpires: 2027-07-03T00:00:00.000Z\nPreferred-Languages: en\n",
+        media_type="text/plain",
+        headers={"Content-Disposition": "inline"}
+    )
 
 @app.get("/health")
 async def health_check():
@@ -181,6 +244,32 @@ async def readiness_check():
         status_code=status_code
     )
 
+
+@app.get("/dpa")
+async def get_dpa():
+    """
+    Serve the Data Processing Agreement (DPA) template document.
+    This is a static document for enterprise customers.
+    """
+    import json
+    with open("dpa_template.json") as f:
+        dpa = json.load(f)
+    return dpa
+
+
+@app.get("/dpa/subprocessors")
+async def get_subprocessors():
+    """
+    Return the current list of subprocessors handling user data.
+    """
+    import json
+    with open("dpa_template.json") as f:
+        dpa = json.load(f)
+    return {
+        "subprocessors": dpa["dpa"]["subprocessors"],
+        "updated_at": dpa["dpa"]["effective_date"]
+    }
+
 # Data Models
 class ConnectRequest(BaseModel):
     token: str
@@ -199,8 +288,8 @@ async def create_item(request: Request, item: ItemCreate, current_user: User = D
     item_data = {
         "id": item_id,
         "tenant_id": tenant_id,
-        "text": item.text,
-        "source": item.source,
+        "text": sanitize_text(item.text),
+        "source": html.escape(item.source.strip()),
         "deadline": item.deadline,
         "metadata": item.metadata or {},
         "timestamp": time.time()
