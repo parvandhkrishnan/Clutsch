@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+// API calls go to the same origin (handled by SPA proxy)
+const API_BASE_URL = '';
 
 const AuthContext = createContext(null);
 
@@ -62,6 +63,32 @@ export const AuthProvider = ({ children }) => {
     return false;
   };
 
+  const handleSSOCallback = (accessToken, refreshToken) => {
+    setToken(accessToken);
+    if (refreshToken) {
+      localStorage.setItem('refresh_token', refreshToken);
+    }
+  };
+
+  const register = async (username, email, password, name = '') => {
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password, name }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      setToken(data.access_token);
+      if (data.refresh_token) {
+        localStorage.setItem('refresh_token', data.refresh_token);
+      }
+      return { success: true };
+    }
+    const err = await response.json().catch(() => ({ detail: 'Registration failed' }));
+    return { success: false, error: err.detail || 'Registration failed' };
+  };
+
   const logout = () => {
     setToken(null);
     localStorage.removeItem('refresh_token');
@@ -69,7 +96,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, ssoLogin, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, ssoLogin, register, handleSSOCallback, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Sidebar from './components/Sidebar';
@@ -10,6 +10,7 @@ import Integrations from './pages/Integrations';
 import Settings from './pages/Settings';
 import Tasks from './pages/Tasks';
 import Login from './pages/Login';
+import SSOPopup from './pages/SSOPopup';
 import LandingPage from './pages/LandingPage';
 import Onboarding from './pages/Onboarding';
 import Analytics from './pages/Analytics';
@@ -20,8 +21,17 @@ import './App.css';
 
 const MainLayout = ({ children }) => (
   <div className="app-container">
+    <a href="#main-content" className="skip-to-content" style={{
+      position: 'absolute', left: '-9999px', zIndex: 9999,
+      padding: '8px 16px', background: 'var(--primary-blue)', color: 'white',
+      textDecoration: 'none', borderRadius: '0 0 4px 4px', fontSize: '0.9rem'
+    }}
+    onFocus={(e) => e.target.style.left = '8px'}
+    onBlur={(e) => e.target.style.left = '-9999px'}>
+      Skip to content
+    </a>
     <Sidebar />
-    <main className="main-content">
+    <main className="main-content" id="main-content">
       {children}
     </main>
   </div>
@@ -37,6 +47,7 @@ function App() {
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/sso-popup" element={<SSOPopup />} />
           <Route path="/onboarding" element={
             <ProtectedRoute>
               <Onboarding />
