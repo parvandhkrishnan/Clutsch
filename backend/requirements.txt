@@ -1,0 +1,31 @@
+# Reconstructed from actual imports across backend/**/*.py — no manifest
+# existed in the repo before this. Pin ranges are minimums known to support
+# the APIs this codebase uses (e.g. SQLAlchemy 2.0's async ORM); exact
+# resolution should be verified by actually running `pip install` somewhere
+# with real network/Python access, which wasn't available while writing this.
+
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+gunicorn>=21.2.0
+pydantic>=2.5.0
+
+sqlalchemy>=2.0.25
+asyncpg>=0.29.0
+alembic>=1.13.0
+
+passlib[bcrypt]>=1.7.4
+PyJWT>=2.8.0
+pyotp>=2.9.0
+cryptography>=42.0.0
+
+slowapi>=0.1.9
+python-dotenv>=1.0.0
+httpx>=0.26.0
+requests>=2.31.0
+
+google-generativeai>=0.4.0
+razorpay>=1.4.0
+
+# --- test dependencies ---
+pytest>=7.4.0
+pytest-asyncio>=0.23.0
