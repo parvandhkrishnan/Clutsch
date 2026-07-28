@@ -33,6 +33,16 @@ export default defineConfig([
       // Kept visible as a warning rather than silenced, so new code is
       // still nudged toward the stricter pattern.
       'react-hooks/set-state-in-effect': 'warn',
+      // Flags calling any impure function (Date.now(), Math.random(), etc.)
+      // synchronously during render — the two real cases here are both
+      // Date.now() used as a "roughly now" filter cutoff / display
+      // fallback. There's no meaningful way to useMemo a wall-clock read
+      // (memoization is dependency-based, not time-based); doing this
+      // "properly" would mean introducing a real ticking clock
+      // (useState + setInterval) purely to satisfy the compiler for a
+      // value where a few milliseconds of staleness has zero observable
+      // effect. Not worth that complexity for this use case.
+      'react-hooks/purity': 'warn',
       // AuthContext.jsx (useAuth) and toast.jsx (showToast,
       // registerToastHandler) each co-locate a small non-component helper
       // with the component/context they belong to — a standard, idiomatic

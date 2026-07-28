@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import { createContext, useState, useContext, useEffect } from 'react';
 
 // API calls go to the same origin (handled by SPA proxy)
 const API_BASE_URL = '';
@@ -25,7 +25,7 @@ const decodeTokenPayload = (jwtToken) => {
         .join('')
     );
     return JSON.parse(json);
-  } catch (e) {
+  } catch {
     return null;
   }
 };

@@ -19,6 +19,8 @@ export default function useWebSocket(tenantId, userId, onMessage) {
   // completed) but the lint rule can't see that — routing through a ref
   // avoids the self-reference entirely rather than leaving it flagged.
   const connectRef = useRef(null);
+
+  const connect = useCallback(() => {
     if (!tenantId || !userId || !mountedRef.current) return;
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';

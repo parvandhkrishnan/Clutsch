@@ -5,25 +5,20 @@ import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import DelegationModal from '../components/DelegationModal';
 import useWebSocket from '../utils/useWebSocket';
-import { showToast, registerToastHandler, ToastContainer } from '../utils/toast';
-import { 
-  MessageSquare, 
-  Mail, 
+import { registerToastHandler, ToastContainer } from '../utils/toast';
+import {
+  MessageSquare,
+  Mail,
   MessageCircle,
   Check,
   Clock,
   ExternalLink,
   Loader2,
-  Bug,
-  AlertCircle,
   Users,
   LayoutGrid,
   TrendingUp,
-  TrendingDown,
   Info,
   Lightbulb,
-  Filter,
-  Shield,
   UserPlus,
   X
 } from 'lucide-react';
@@ -544,7 +539,7 @@ const Dashboard = () => {
     }
   };
 
-  const handleDelegate = (itemId, member, note) => {
+  const handleDelegate = (itemId, member) => {
     setItems(prev => prev.filter(i => i.id !== itemId));
     showToast(`Delegated to ${member.name || member.username}`);
   };
