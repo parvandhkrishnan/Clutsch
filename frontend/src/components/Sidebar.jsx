@@ -43,7 +43,7 @@ const SidebarItem = ({ icon: Icon, label, to, badge, onClick }) => {
 };
 
 const Sidebar = () => {
-  const { token, logout } = useAuth();
+  const { token, user, logout } = useAuth();
   const [stats, setStats] = useState({ snoozed_count: 0 });
   const [legalModal, setLegalModal] = useState(null); // 'tos' | 'privacy' | null
 
@@ -80,7 +80,9 @@ const Sidebar = () => {
           badge={stats.snoozed_count} 
         />
         <SidebarItem icon={BarChart3} label="Analytics" to="/dashboard/analytics" />
-        <SidebarItem icon={ShieldAlert} label="Admin" to="/dashboard/admin" />
+        {user?.role === 'admin' && (
+          <SidebarItem icon={ShieldAlert} label="Admin" to="/dashboard/admin" />
+        )}
         {/* <SidebarItem icon={Folder} label="Projects" to="/projects" /> */}
         {/* <SidebarItem icon={MessageSquare} label="Messages" to="/messages" /> */}
         <SidebarItem icon={Share2} label="Integrations" to="/integrations" />

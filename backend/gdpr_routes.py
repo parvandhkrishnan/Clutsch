@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Body, Request
 from typing import List, Optional, Dict, Any
 import time
 import json
-from auth.models import User
+from auth.models import User, get_user_by_id, get_user_by_username, get_user_by_email, update_user_fields, delete_user
 from auth.dependencies import get_current_active_user, get_admin_user
 from database import db
 from limiter import limiter
@@ -22,7 +22,7 @@ router = APIRouter(prefix="/gdpr", tags=["GDPR (EU) Compliance"])
 # ============================================================================
 # HELPER: Collect all data for a user across every layer
 # ============================================================================
-def _collect_all_user_data(user_id: str, tenant_id: str) -> Dict[str, Any]:
+async def _collect_all_user_data(user_id: str, tenant_id: str) -> Dict[str, Any]:
     """Gather all data associated with a user from every storage layer."""
     data = {
         "user_info": None,
@@ -36,22 +36,24 @@ def _collect_all_user_data(user_id: str, tenant_id: str) -> Dict[str, Any]:
         "contact_priorities": [],
     }
 
-    # 1. User model info — read from auth.models
-    from auth.models import get_users_db
-    for u in get_users_db():
-        if u.id == user_id:
-            data["user_info"] = {
-                "id": u.id,
-                "username": u.username,
-                "email": u.email,
-                "role": u.role,
-                "tenant_id": u.tenant_id,
-                "mfa_enabled": u.mfa_enabled
-            }
-            break
+    # 1. User model info
+    user = await get_user_by_id(user_id)
+    if user:
+        data["user_info"] = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "role": user.role,
+            "tenant_id": user.tenant_id,
+            "mfa_enabled": user.mfa_enabled,
+        }
 
     # 2. Items owned by or referencing this user
-    all_items = db.get_items(tenant_id)
+    # NOTE: the real Item schema (models.py) has no user_id/assigned_to column
+    # — those were ad-hoc dict keys some test fixtures added to the old
+    # in-memory mock. In production, items only carry tenant_id, so this
+    # filter will not match anything unless such keys happen to be present.
+    all_items = await db.get_items(tenant_id)
     user_items = []
     for item in all_items:
         if item.get("user_id") == user_id or item.get("assigned_to") == user_id:
@@ -61,44 +63,36 @@ def _collect_all_user_data(user_id: str, tenant_id: str) -> Dict[str, Any]:
     data["items"] = user_items
 
     # 3. Consent records
-    data["consent_records"] = db.get_consents(user_id)
+    data["consent_records"] = await db.get_consents(user_id)
 
     # 4. Nominee
-    data["nominee"] = db.get_nominee(user_id)
+    data["nominee"] = await db.get_nominee(user_id)
 
     # 5. Grievances
-    data["grievances"] = db.get_grievances(user_id)
+    data["grievances"] = await db.get_grievances(user_id)
 
     # 6. Delegations where this user is the assignee
-    for item_id, del_info in dict(db.delegations).items():
-        if del_info.get("assigned_to") == user_id:
-            data["delegations_received"].append({
-                "item_id": item_id,
-                **del_info
-            })
+    data["delegations_received"] = await db.get_delegations_for_assignee(user_id)
 
     # 7. Integration tokens (redacted)
-    if tenant_id in getattr(db, 'connected_integrations', {}):
-        for provider, config in db.connected_integrations[tenant_id].items():
-            redacted = {}
-            for k, v in config.items():
-                if k.lower() in ('token', 'secret', 'refresh_token', 'access_token', 'api_key', 'password'):
-                    redacted[k] = "***REDACTED***"
-                else:
-                    redacted[k] = v
-            data["integrations"].append({"provider": provider, **redacted})
+    tenant_integrations = await db.get_connected_integrations(tenant_id)
+    for provider, config in tenant_integrations.items():
+        redacted = {}
+        for k, v in config.items():
+            if k.lower() in ('token', 'secret', 'refresh_token', 'access_token', 'api_key', 'password'):
+                redacted[k] = "***REDACTED***"
+            else:
+                redacted[k] = v
+        data["integrations"].append({"provider": provider, **redacted})
 
     # 8. Custom weights
-    data["custom_weights"] = db.get_custom_weights(tenant_id)
+    data["custom_weights"] = await db.get_custom_weights(tenant_id)
 
     # 9. Contact priorities involving this user
-    cps = db.get_contact_priorities(tenant_id)
+    cps = await db.get_contact_priorities(tenant_id)
     for platform, handles in cps.items():
         for handle, priority in handles.items():
-            if handle == user_id or handle == getattr(
-                [u for u in get_users_db() if u.id == user_id], 
-                'email', None
-            ):
+            if handle == user_id or (user and handle == user.email):
                 data["contact_priorities"].append({
                     "platform": platform,
                     "handle": handle,
@@ -117,11 +111,11 @@ async def gdpr_access(request: Request, current_user: User = Depends(get_current
     """
     Right of Access (GDPR Art. 15): Return all personal data held about the user.
     """
-    data = _collect_all_user_data(current_user.id, current_user.tenant_id)
+    data = await _collect_all_user_data(current_user.id, current_user.tenant_id)
     log_compliance_event(
         current_user.id, "GDPR", "DATA_ACCESS", "fulfilled"
     )
-    db.add_audit_log(current_user.id, "GDPR_ACCESS", "User accessed all personal data via GDPR Art. 15")
+    await db.add_audit_log(current_user.id, "GDPR_ACCESS", "User accessed all personal data via GDPR Art. 15")
     return {
         "regulation": "GDPR",
         "right": "access",
@@ -146,8 +140,6 @@ async def gdpr_rectify(
     Right to Rectification (GDPR Art. 16): Correct inaccurate personal data.
     Supported fields: email, username.
     """
-    from auth.models import get_users_db, get_user_by_username, get_user_by_email, _users_db
-
     allowed_fields = {"email", "username"}
     applied = {}
     errors = {}
@@ -162,22 +154,18 @@ async def gdpr_rectify(
 
         # Check for uniqueness conflicts
         if field == "username" and value != current_user.username:
-            if get_user_by_username(value):
+            if await get_user_by_username(value):
                 errors[field] = "Username already taken"
                 continue
         if field == "email" and value != current_user.email:
-            if get_user_by_email(value):
+            if await get_user_by_email(value):
                 errors[field] = "Email already registered"
                 continue
 
-        # Apply update
-        users = get_users_db()
-        for u in users:
-            if u.id == current_user.id:
-                setattr(u, field, value)
-                applied[field] = value
-                break
-        _users_db = users
+        applied[field] = value
+
+    if applied:
+        await update_user_fields(current_user.id, **applied)
 
     if not applied and errors:
         raise HTTPException(status_code=400, detail={"applied": applied, "errors": errors})
@@ -186,7 +174,7 @@ async def gdpr_rectify(
         current_user.id, "GDPR", "DATA_RECTIFICATION", "fulfilled" if not errors else "partial",
         details=f"Applied: {list(applied.keys())}"
     )
-    db.add_audit_log(current_user.id, "GDPR_RECTIFY", f"Rectified fields: {list(applied.keys())}")
+    await db.add_audit_log(current_user.id, "GDPR_RECTIFY", f"Rectified fields: {list(applied.keys())}")
 
     return {
         "regulation": "GDPR",
@@ -204,67 +192,52 @@ async def gdpr_rectify(
 @limiter.limit("3/minute")
 async def gdpr_erase(request: Request, current_user: User = Depends(get_current_active_user)):
     """
-    Right to Erasure (Art. 17 GDPR): Full cascade deletion across ALL layers.
-    - Removes from users table, items, consent records, nominees, grievances,
-      delegations, MFA secrets, cache layers, connected integrations.
-    - Does NOT erase the compliance audit log entry for this request itself.
+    Right to Erasure (Art. 17 GDPR): cascade deletion of this user's own data
+    across every storage layer, then the user record itself.
+
+    Deviations from the original in-memory mock, forced by the real
+    FK-constrained schema (models.py, not modifiable here):
+    - Grievances are DELETED rather than anonymized in place. The old mock
+      set user_id to a "**ERASED**" sentinel string, which is not possible
+      here since Grievance.user_id is a NOT NULL foreign key to users.id.
+    - Per-owner item erasure (item.get("user_id") == user_id) is a no-op in
+      practice: the real Item schema has no user_id/assigned_to column, so
+      there is nothing to filter on for a single user within a shared tenant
+      (tenant-wide item erasure is available separately via
+      privacy_routes.py's account deletion, which calls delete_tenant_data).
     """
-    from auth.models import get_users_db, _users_db
     user_id = current_user.id
     tenant_id = current_user.tenant_id
 
-    # --- Layer 1: Auth/Users ---
-    users = get_users_db()
-    _users_db = [u for u in users if u.id != user_id]
+    # Layers 3-7, 9-10: everything that references this user must be cleared
+    # BEFORE the user row is deleted, or Postgres will reject the delete on
+    # the foreign key constraints (Grievance, AuditLog, ConsentRecord,
+    # Nominee, MFARecoveryCode, FailedLogin, LockedAccount, Delegation, Presence).
+    await db.delete_user_data(user_id)
 
-    # --- Layer 2: Items ---
-    all_items = db.get_items(tenant_id)
-    db._items = [i for i in all_items if i.get("user_id") != user_id]
+    # MFA secret lives on the User row itself / in-memory pending state —
+    # clear explicitly (delete_user_data doesn't touch these).
+    await db.clear_mfa_secret(user_id)
+    await db.clear_mfa_pending_secret(user_id)
+    await db.clear_mfa_recovery_codes(user_id)
 
-    # --- Layer 3: Consent records ---
-    if hasattr(db, 'consent_records') and user_id in db.consent_records:
-        del db.consent_records[user_id]
-
-    # --- Layer 4: Nominee ---
-    if hasattr(db, 'nominees') and user_id in db.nominees:
-        del db.nominees[user_id]
-
-    # --- Layer 5: Grievances (anonymize, don't delete — evidence preservation) ---
-    if hasattr(db, 'grievance_logs'):
-        for g in db.grievance_logs:
-            if g.get("user_id") == user_id:
-                g["user_id"] = "**ERASED**"
-                g["description"] = "**ERASED PER ART. 17 GDPR**"
-
-    # --- Layer 6: Delegations ---
-    db.delegations = {k: v for k, v in db.delegations.items() 
-                      if v.get("assigned_to") != user_id}
-
-    # --- Layer 7: MFA secrets ---
-    db.clear_mfa_secret(user_id)
-    db.clear_mfa_pending_secret(user_id)
-    db.clear_mfa_recovery_codes(user_id)
-
-    # --- Layer 8: Cache ---
+    # Cache
     config_cache.invalidate_all()
     integration_cache.invalidate_all()
 
-    # --- Layer 9: Connected integrations (per-user tokens, anonymize) ---
-    # Remove any per-user integration configs
-    if tenant_id in getattr(db, 'connected_integrations', {}):
-        for provider, config in list(db.connected_integrations[tenant_id].items()):
-            # If integration config references this user, remove it
-            if config.get("user_id") == user_id or config.get("email") == current_user.email:
-                del db.connected_integrations[tenant_id][provider]
+    # Connected integrations that reference this user specifically
+    tenant_integrations = await db.get_connected_integrations(tenant_id)
+    for provider, config in list(tenant_integrations.items()):
+        if config.get("user_id") == user_id or config.get("email") == current_user.email:
+            await db.disconnect_integration(tenant_id, provider)
 
-    # --- Layer 10: Locked accounts / failed attempts ---
-    db.locked_accounts.pop(user_id, None)
-    db.failed_login_attempts.pop(user_id, None)
+    # Layer 1: Auth/Users (deleted last, now that all FK references are gone)
+    await delete_user(user_id)
 
-    # --- Log the erasure (before user_ref is lost) ---
+    # --- Log the erasure ---
     log_compliance_event(
         user_id, "GDPR", "DATA_ERASURE", "fulfilled",
-        details="Full cascade erasure completed across all storage layers"
+        details="Cascade erasure completed across all storage layers"
     )
 
     return {
@@ -273,8 +246,8 @@ async def gdpr_erase(request: Request, current_user: User = Depends(get_current_
         "article": "17",
         "message": "All personal data has been erased across all storage layers.",
         "cascade_layers_deleted": [
-            "user_record", "items", "consent_records", "nominee",
-            "grievances_anonymized", "delegations", "mfa_secrets",
+            "user_record", "consent_records", "nominee",
+            "grievances", "delegations", "mfa_secrets",
             "cache_invalidated", "integrations", "locked_accounts"
         ],
         "note": "Compliance audit log retained per GDPR Art. 5(2) accountability principle."
@@ -300,7 +273,10 @@ async def gdpr_restrict(
     if action not in ("restrict", "lift"):
         raise HTTPException(status_code=400, detail="Action must be 'restrict' or 'lift'")
 
-    # Store restriction state
+    # Store restriction state. This is kept in-memory on the db singleton
+    # (like ccpa_routes.py's do_not_sell flag) rather than in a real table —
+    # there is no processing_restrictions table in the fixed schema, and this
+    # was not part of the requested migration's scope.
     if not hasattr(db, 'processing_restrictions'):
         db.processing_restrictions = {}
 
@@ -317,7 +293,7 @@ async def gdpr_restrict(
         msg = "Processing restriction lifted. AI scoring and priority processing resumed."
 
     log_compliance_event(current_user.id, "GDPR", "RESTRICT_PROCESSING", outcome)
-    db.add_audit_log(current_user.id, "GDPR_RESTRICT", msg)
+    await db.add_audit_log(current_user.id, "GDPR_RESTRICT", msg)
 
     return {
         "regulation": "GDPR",
@@ -335,13 +311,13 @@ async def gdpr_restrict(
 @limiter.limit("5/minute")
 async def gdpr_port(request: Request, current_user: User = Depends(get_current_active_user)):
     """
-    Right to Data Portability (GDPR Art. 20): Export personal data in 
+    Right to Data Portability (GDPR Art. 20): Export personal data in
     structured, machine-readable JSON format.
     """
-    data = _collect_all_user_data(current_user.id, current_user.tenant_id)
+    data = await _collect_all_user_data(current_user.id, current_user.tenant_id)
 
     log_compliance_event(current_user.id, "GDPR", "DATA_EXPORT", "fulfilled")
-    db.add_audit_log(current_user.id, "GDPR_PORT", "User exported data via GDPR Art. 20")
+    await db.add_audit_log(current_user.id, "GDPR_PORT", "User exported data via GDPR Art. 20")
 
     return {
         "regulation": "GDPR",

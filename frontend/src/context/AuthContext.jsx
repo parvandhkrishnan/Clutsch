@@ -5,6 +5,31 @@ const API_BASE_URL = '';
 
 const AuthContext = createContext(null);
 
+// The backend signs the access token with claims { user_id, tenant_id, role }
+// (see backend/auth_routes.py's create_access_token calls), but neither the
+// login/register response nor a working "/auth/me" endpoint hands back a
+// user object. Decoding the JWT payload client-side is the only way to
+// expose the current user's role to the UI without a backend change. This
+// is NOT a security boundary — the payload is not signature-verified here —
+// it's only used for client-side UX decisions (e.g. hiding the Admin nav
+// link); every real admin endpoint enforces the role check server-side.
+const decodeTokenPayload = (jwtToken) => {
+  try {
+    const base64Url = jwtToken.split('.')[1];
+    if (!base64Url) return null;
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + c.charCodeAt(0).toString(16).padStart(2, '0'))
+        .join('')
+    );
+    return JSON.parse(json);
+  } catch (e) {
+    return null;
+  }
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -15,8 +40,12 @@ export const AuthProvider = ({ children }) => {
       // In a real app, we might verify the token or fetch user profile here
       // For now, we'll just assume it's valid if present
       localStorage.setItem('token', token);
-      // Mock user data from token if we wanted to decode it, 
-      // but for MVP we just need the token to exist.
+      const payload = decodeTokenPayload(token);
+      if (payload) {
+        setUser({ id: payload.user_id, tenant_id: payload.tenant_id, role: payload.role });
+      } else {
+        setUser(null);
+      }
     } else {
       localStorage.removeItem('token');
       setUser(null);

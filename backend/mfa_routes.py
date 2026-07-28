@@ -1,8 +1,8 @@
 """MFA routes for TOTP setup, verification, and recovery codes."""
 from fastapi import APIRouter, Depends, HTTPException, Request, Body
-from auth.models import User, get_users_db
+from auth.models import User, get_user_by_id, set_mfa_enabled
 from auth.dependencies import get_current_active_user
-from auth.jwt_handler import create_access_token
+from auth.jwt_handler import create_access_token, create_refresh_token
 from database import db
 from limiter import limiter
 from mfa import (
@@ -23,7 +23,7 @@ async def mfa_setup(
     """Generate a TOTP secret and return the provisioning URI for QR code setup."""
     secret = generate_totp_secret()
     # Store the pending secret (not yet verified)
-    db.set_mfa_pending_secret(current_user.id, secret)
+    await db.set_mfa_pending_secret(current_user.id, secret)
     uri = get_totp_uri(secret, current_user.email)
     return {
         "secret": secret,
@@ -40,31 +40,27 @@ async def mfa_verify(
     current_user: User = Depends(get_current_active_user)
 ):
     """Verify a TOTP code to enable MFA for the user."""
-    pending_secret = db.get_mfa_pending_secret(current_user.id)
+    pending_secret = await db.get_mfa_pending_secret(current_user.id)
     if not pending_secret:
         raise HTTPException(status_code=400, detail="No pending MFA setup. Call /setup first.")
-    
+
     if not verify_totp(pending_secret, code):
         raise HTTPException(status_code=400, detail="Invalid TOTP code. Try again.")
-    
+
     # Enable MFA and store the secret
-    db.set_mfa_secret(current_user.id, pending_secret)
-    db.clear_mfa_pending_secret(current_user.id)
-    
+    await db.set_mfa_secret(current_user.id, pending_secret)
+    await db.clear_mfa_pending_secret(current_user.id)
+
     # Generate recovery codes
     recovery_codes = generate_recovery_codes()
     hashed_codes = [hash_recovery_code(c) for c in recovery_codes]
-    db.set_mfa_recovery_codes(current_user.id, hashed_codes)
-    
+    await db.set_mfa_recovery_codes(current_user.id, hashed_codes)
+
     # Update user model
-    users = get_users_db()
-    for u in users:
-        if u.id == current_user.id:
-            u.mfa_enabled = True
-            break
-    
-    db.add_audit_log(current_user.id, "MFA_ENABLED", "User enabled TOTP MFA")
-    
+    await set_mfa_enabled(current_user.id, True)
+
+    await db.add_audit_log(current_user.id, "MFA_ENABLED", "User enabled TOTP MFA")
+
     return {
         "status": "success",
         "message": "MFA has been enabled successfully.",
@@ -85,23 +81,18 @@ async def mfa_login(
     Called after successful password verification when the user has MFA enabled.
     Returns a JWT token on success.
     """
-    users = get_users_db()
-    user = None
-    for u in users:
-        if u.id == user_id:
-            user = u
-            break
-    
+    user = await get_user_by_id(user_id)
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     if not user.mfa_enabled:
         raise HTTPException(status_code=400, detail="MFA is not enabled for this user")
-    
+
     # Check recovery codes first
-    mfa_secret = db.get_mfa_secret(user.id)
-    recovery_codes = db.get_mfa_recovery_codes(user.id)
-    
+    mfa_secret = await db.get_mfa_secret(user.id)
+    recovery_codes = await db.get_mfa_recovery_codes(user.id)
+
     if mfa_secret and verify_totp(mfa_secret, code):
         # Valid TOTP code
         pass
@@ -112,23 +103,23 @@ async def mfa_login(
         if hashed in recovery_codes:
             # Consume the recovery code (remove it)
             recovery_codes.remove(hashed)
-            db.set_mfa_recovery_codes(user.id, recovery_codes)
-            db.add_audit_log(user.id, "MFA_RECOVERY_USED", "User used a recovery code to log in")
+            await db.set_mfa_recovery_codes(user.id, recovery_codes)
+            await db.add_audit_log(user.id, "MFA_RECOVERY_USED", "User used a recovery code to log in")
         else:
             raise HTTPException(status_code=401, detail="Invalid TOTP code or recovery code")
     else:
         raise HTTPException(status_code=401, detail="Invalid TOTP code or recovery code")
-    
+
     # Generate final token
     access_token = create_access_token(
         data={"user_id": user.id, "tenant_id": user.tenant_id, "role": user.role}
     )
-    refresh_token = create_access_token(  # Using create_refresh_token would be better
+    refresh_token = create_refresh_token(
         data={"user_id": user.id}
     )
-    
-    db.add_audit_log(user.id, "MFA_LOGIN_SUCCESS", "User completed MFA and logged in")
-    
+
+    await db.add_audit_log(user.id, "MFA_LOGIN_SUCCESS", "User completed MFA and logged in")
+
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
@@ -144,24 +135,20 @@ async def mfa_disable(
     current_user: User = Depends(get_current_active_user)
 ):
     """Disable MFA for the current user (requires valid TOTP code)."""
-    mfa_secret = db.get_mfa_secret(current_user.id)
+    mfa_secret = await db.get_mfa_secret(current_user.id)
     if not mfa_secret:
         raise HTTPException(status_code=400, detail="MFA is not enabled")
-    
+
     if not verify_totp(mfa_secret, code):
         raise HTTPException(status_code=400, detail="Invalid TOTP code")
-    
-    db.clear_mfa_secret(current_user.id)
-    db.clear_mfa_recovery_codes(current_user.id)
-    
-    users = get_users_db()
-    for u in users:
-        if u.id == current_user.id:
-            u.mfa_enabled = False
-            break
-    
-    db.add_audit_log(current_user.id, "MFA_DISABLED", "User disabled MFA")
-    
+
+    await db.clear_mfa_secret(current_user.id)
+    await db.clear_mfa_recovery_codes(current_user.id)
+
+    await set_mfa_enabled(current_user.id, False)
+
+    await db.add_audit_log(current_user.id, "MFA_DISABLED", "User disabled MFA")
+
     return {"status": "success", "message": "MFA has been disabled."}
 
 

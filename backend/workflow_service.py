@@ -13,7 +13,7 @@ class WorkflowService:
         """
         Evaluate items against active workflows and execute actions.
         """
-        workflows = self.db.get_workflows(tenant_id)
+        workflows = await self.db.get_workflows(tenant_id)
         active_workflows = [w for w in workflows.values() if w.get("enabled", True)]
         
         if not active_workflows:
@@ -58,39 +58,30 @@ class WorkflowService:
 
     async def _execute_actions(self, tenant_id: str, item: Dict[str, Any], actions: List[Dict[str, Any]]):
         item_id = item["id"]
-        
-        # We need access to snoozed/archived sets. In this mock, they are in db.
-        # But ScoringService/main.py uses the global ones.
-        # Let's import them or use db helpers if they exist.
-        
-        from services import archived_items, snoozed_items
-        from team_routes import delegate_item # Careful with circular imports
+
+        # Careful with circular imports
         from realtime_routes import notify_delegation
 
         for action in actions:
             action_type = action.get("type")
             params = action.get("params", {})
-            
+
             logger.info(f"Executing workflow action {action_type} for item {item_id}")
-            
+
             if action_type == "archive":
-                if tenant_id not in archived_items:
-                    archived_items[tenant_id] = set()
-                archived_items[tenant_id].add(item_id)
-                self.db.add_audit_log("system", "workflow_archive", f"Auto-archived item {item_id}")
-                
+                await self.db.archive_item(tenant_id, item_id)
+                await self.db.add_audit_log("system", "workflow_archive", f"Auto-archived item {item_id}")
+
             elif action_type == "snooze":
                 hours = params.get("hours", 24)
-                if tenant_id not in snoozed_items:
-                    snoozed_items[tenant_id] = {}
                 until = datetime.datetime.now() + datetime.timedelta(hours=hours)
-                snoozed_items[tenant_id][item_id] = until
-                self.db.add_audit_log("system", "workflow_snooze", f"Auto-snoozed item {item_id} for {hours}h")
-                
+                await self.db.snooze_item(tenant_id, item_id, until)
+                await self.db.add_audit_log("system", "workflow_snooze", f"Auto-snoozed item {item_id} for {hours}h")
+
             elif action_type == "delegate":
                 to_user_id = params.get("to_user_id")
                 if to_user_id:
-                    success = self.db.delegate_item(
+                    success = await self.db.delegate_item(
                         item_id=item_id,
                         tenant_id=tenant_id,
                         to_user_id=to_user_id,
@@ -103,6 +94,6 @@ class WorkflowService:
                             await notify_delegation(tenant_id, to_user_id, item_id, "System")
                         except Exception:
                             pass
-                        self.db.add_audit_log("system", "workflow_delegate", f"Auto-delegated item {item_id} to {to_user_id}")
+                        await self.db.add_audit_log("system", "workflow_delegate", f"Auto-delegated item {item_id} to {to_user_id}")
 
 workflow_service = WorkflowService(db)

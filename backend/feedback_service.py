@@ -20,7 +20,7 @@ class FeedbackService:
         suggested_tier: 'urgent', 'high', 'medium', 'low'
         """
         # 1. Get the item from DB
-        items = self.db.get_items(tenant_id)
+        items = await self.db.get_items(tenant_id)
         item = next((i for i in items if i["id"] == item_id), None)
         
         if not item:
@@ -36,9 +36,9 @@ class FeedbackService:
             semantics = analysis.get("semantics", [])
 
         if feedback_type == "agree":
-            # Optional: reinforce slightly? 
+            # Optional: reinforce slightly?
             # For now, just log it.
-            self.db.add_audit_log(user_id, "priority_feedback", f"User agreed with priority for item {item_id}")
+            await self.db.add_audit_log(user_id, "priority_feedback", f"User agreed with priority for item {item_id}")
             return True
 
         if feedback_type == "correction" and suggested_tier:
@@ -55,37 +55,37 @@ class FeedbackService:
             
             # Adjust semantic weights
             if semantics:
-                weights = self.db.get_semantic_weights(tenant_id)
+                weights = await self.db.get_semantic_weights(tenant_id)
                 for concept in semantics:
                     current_weight = weights.get(concept, 0.15) # Default if not set
                     new_weight = current_weight + (direction * self.adjustment_step)
                     new_weight = max(self.min_boost, min(self.max_boost, new_weight))
                     weights[concept] = round(new_weight, 3)
-                
-                self.db.set_semantic_weights(tenant_id, weights)
-                self.db.add_audit_log(user_id, "auto_tuning", f"Adjusted weights for {semantics} based on feedback for {item_id}")
+
+                await self.db.set_semantic_weights(tenant_id, weights)
+                await self.db.add_audit_log(user_id, "auto_tuning", f"Adjusted weights for {semantics} based on feedback for {item_id}")
 
             # Adjust entity weights (Project/Client)
             metadata = item.get("metadata", {})
             project_id = metadata.get("project_id")
             if project_id:
-                p_priorities = self.db.get_project_priorities(tenant_id)
+                p_priorities = await self.db.get_project_priorities(tenant_id)
                 current_p = p_priorities.get(project_id, "medium").lower()
                 # Simple logic: if correction to higher, bump project to high. If lower, bump to low.
                 if direction > 0:
                     p_priorities[project_id] = "high"
                 else:
                     p_priorities[project_id] = "low"
-                self.db.set_project_priority(tenant_id, project_id, p_priorities[project_id])
+                await self.db.set_project_priority(tenant_id, project_id, p_priorities[project_id])
 
             client_id = metadata.get("client_id")
             if client_id:
-                c_priorities = self.db.get_client_priorities(tenant_id)
+                c_priorities = await self.db.get_client_priorities(tenant_id)
                 if direction > 0:
                     c_priorities[client_id] = "high"
                 else:
                     c_priorities[client_id] = "low"
-                self.db.set_client_priority(tenant_id, client_id, c_priorities[client_id])
+                await self.db.set_client_priority(tenant_id, client_id, c_priorities[client_id])
 
             return True
 

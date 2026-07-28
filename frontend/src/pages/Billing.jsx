@@ -1,14 +1,11 @@
-import React, { useState } from 'react';
-import { 
-  Check, 
-  Zap, 
-  Users, 
-  CreditCard, 
-  Download, 
-  ShieldCheck, 
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Check,
+  CreditCard,
+  ShieldCheck,
   ArrowRight,
-  TrendingUp,
-  Loader2
+  Loader2,
+  Receipt
 } from 'lucide-react';
 import api from '../utils/api';
 import { showToast } from '../utils/toast';
@@ -38,7 +35,7 @@ const PlanCard = ({ title, price, features, highlighted, cta, isCustom, current,
         </li>
       ))}
     </ul>
-    <button 
+    <button
       className={`btn plan-btn ${current ? 'current-btn' : (highlighted ? 'btn-primary' : 'btn-secondary')}`}
       onClick={() => !current && onUpgrade(title)}
       disabled={current || loading}
@@ -50,7 +47,8 @@ const PlanCard = ({ title, price, features, highlighted, cta, isCustom, current,
 );
 
 const UsageBar = ({ label, current, total, colorClass }) => {
-  const percentage = Math.min(100, (current / total) * 100);
+  const safeTotal = total > 0 ? total : 1;
+  const percentage = Math.min(100, (current / safeTotal) * 100);
   return (
     <div className="usage-item">
       <div className="usage-info">
@@ -58,8 +56,8 @@ const UsageBar = ({ label, current, total, colorClass }) => {
         <span className="usage-stats">{current} / {total}</span>
       </div>
       <div className="neon-progress-container">
-        <div 
-          className={`neon-progress-fill ${colorClass}`} 
+        <div
+          className={`neon-progress-fill ${colorClass}`}
           style={{ width: `${percentage}%` }}
         ></div>
       </div>
@@ -67,13 +65,60 @@ const UsageBar = ({ label, current, total, colorClass }) => {
   );
 };
 
+const PLAN_FEATURES = {
+  Free: [
+    '2 Integrations',
+    '50 Messages/mo',
+    'AI Priority Scoring',
+    'Basic Support'
+  ],
+  Pro: [
+    'All Integrations',
+    'Unlimited Messages',
+    'AI Priority Scoring',
+    'Quick Actions',
+    'Advanced Search',
+    'Mobile Access'
+  ],
+  SME: [
+    'Everything in Pro',
+    'Up to 20 Users',
+    'Team Shared Feeds',
+    'Delegation Workflow',
+    'Priority Support'
+  ],
+  Enterprise: [
+    'Everything in SME',
+    'Unlimited Users',
+    'Custom Integrations',
+    'SAML / SSO',
+    'Dedicated Manager',
+    'Analytics'
+  ]
+};
+
 const Billing = () => {
   const [loadingPlan, setLoadingPlan] = useState(null);
-  const [history] = useState([
-    { id: 'INV-2024-001', date: 'Jul 01, 2024', amount: '$12.00', status: 'Paid' },
-    { id: 'INV-2024-002', date: 'Jun 01, 2024', amount: '$12.00', status: 'Paid' },
-    { id: 'INV-2024-003', date: 'May 01, 2024', amount: '$12.00', status: 'Paid' },
-  ]);
+  const [billing, setBilling] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchBilling = useCallback(async () => {
+    try {
+      const data = await api.get('/razorpay/status');
+      setBilling(data);
+      setError(null);
+    } catch (err) {
+      console.error("Failed to fetch billing info:", err);
+      setError(err.message || "Failed to load billing information.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBilling();
+  }, [fetchBilling]);
 
   const handleCheckout = async (planTitle) => {
     setLoadingPlan(planTitle);
@@ -125,31 +170,20 @@ const Billing = () => {
                 }
   };
 
+  const currentPlanName = billing?.plan || null;
+
   const plans = [
     {
       title: 'Free',
       price: '0',
       cta: 'Downgrade',
-      features: [
-        '2 Integrations',
-        '50 Messages/mo',
-        'AI Priority Scoring',
-        'Basic Support'
-      ]
+      features: PLAN_FEATURES.Free
     },
     {
       title: 'Pro',
       price: '12',
       cta: 'Get Pro',
-      features: [
-        'All Integrations',
-        'Unlimited Messages',
-        'AI Priority Scoring',
-        'Quick Actions',
-        'Advanced Search',
-        'Mobile Access'
-      ],
-      current: true
+      features: PLAN_FEATURES.Pro
     },
     {
       title: 'SME',
@@ -157,29 +191,34 @@ const Billing = () => {
       isCustom: true,
       cta: 'Contact Sales',
       highlighted: true,
-      features: [
-        'Everything in Pro',
-        'Up to 20 Users',
-        'Team Shared Feeds',
-        'Delegation Workflow',
-        'Priority Support'
-      ]
+      features: PLAN_FEATURES.SME
     },
     {
       title: 'Enterprise',
       price: 'Custom',
       isCustom: true,
       cta: 'Contact Sales',
-      features: [
-        'Everything in SME',
-        'Unlimited Users',
-        'Custom Integrations',
-        'SAML / SSO',
-        'Dedicated Manager',
-        'Analytics'
-      ]
+      features: PLAN_FEATURES.Enterprise
     }
   ];
+
+  const usage = billing?.usage || { active_integrations: 0, team_members: 0, ai_items_processed: 0, smart_responses: 0 };
+  const limits = billing?.limits || { active_integrations: 0, team_members: 0, ai_items_processed: 0, smart_responses: 0 };
+
+  if (loading) {
+    return (
+      <div className="billing-container animate-in">
+        <header className="page-header">
+          <h1>Billing & Subscription</h1>
+          <p>Manage your plan, usage, and billing history.</p>
+        </header>
+        <div className="loading-state" style={{ textAlign: 'center', padding: '60px 20px' }} role="status">
+          <Loader2 size={48} className="spin" style={{ marginBottom: '16px' }} />
+          <p>Loading billing information...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="billing-container animate-in">
@@ -187,6 +226,8 @@ const Billing = () => {
         <h1>Billing & Subscription</h1>
         <p>Manage your plan, usage, and billing history.</p>
       </header>
+
+      {error && <div className="error-state">{error}</div>}
 
       <section className="billing-grid">
         <div className="billing-main">
@@ -196,9 +237,10 @@ const Billing = () => {
           </div>
           <div className="plans-container">
             {plans.map((plan, i) => (
-              <PlanCard 
-                key={i} 
-                {...plan} 
+              <PlanCard
+                key={i}
+                {...plan}
+                current={currentPlanName === plan.title}
                 onUpgrade={handleCheckout}
                 loading={loadingPlan === plan.title}
               />
@@ -208,32 +250,31 @@ const Billing = () => {
           <div className="card glass-effect usage-card">
             <div className="card-header">
               <h3>Usage Limits</h3>
-              <div className="usage-reset">Resets in 12 days</div>
             </div>
             <div className="usage-grid">
-              <UsageBar 
-                label="Active Integrations" 
-                current={4} 
-                total={10} 
-                colorClass="neon-blue" 
+              <UsageBar
+                label="Active Integrations"
+                current={usage.active_integrations}
+                total={limits.active_integrations}
+                colorClass="neon-blue"
               />
-              <UsageBar 
-                label="Team Members" 
-                current={8} 
-                total={20} 
-                colorClass="neon-purple" 
+              <UsageBar
+                label="Team Members"
+                current={usage.team_members}
+                total={limits.team_members}
+                colorClass="neon-purple"
               />
-              <UsageBar 
-                label="AI Items Processed" 
-                current={1250} 
-                total={5000} 
-                colorClass="neon-yellow" 
+              <UsageBar
+                label="AI Items Processed"
+                current={usage.ai_items_processed}
+                total={limits.ai_items_processed}
+                colorClass="neon-yellow"
               />
-              <UsageBar 
-                label="Smart Responses" 
-                current={45} 
-                total={100} 
-                colorClass="neon-green" 
+              <UsageBar
+                label="Smart Responses"
+                current={usage.smart_responses}
+                total={limits.smart_responses}
+                colorClass="neon-green"
               />
             </div>
           </div>
@@ -245,30 +286,22 @@ const Billing = () => {
             <div className="card-details">
               <CreditCard size={24} />
               <div>
-                <p className="card-number">•••• •••• •••• 4242</p>
-                <p className="card-expiry">Expires 12/26</p>
+                <p className="card-number">No payment method on file</p>
               </div>
             </div>
-            <button className="btn-text">Update Method</button>
+            <button className="btn-text" disabled title="Payment method management isn't available yet.">
+              Update Method
+            </button>
           </div>
 
           <div className="card glass-effect billing-history">
             <h3>Billing History</h3>
-            <div className="history-list">
-              {history.map((item, i) => (
-                <div key={i} className="history-item">
-                  <div className="history-info">
-                    <p className="history-id">{item.id}</p>
-                    <p className="history-date">{item.date}</p>
-                  </div>
-                  <div className="history-actions">
-                    <span className="history-amount">{item.amount}</span>
-                    <button className="icon-btn" title="Download Invoice">
-                      <Download size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '32px 16px', gap: '12px', color: 'var(--text-muted)' }}>
+              <Receipt size={32} />
+              <p style={{ margin: 0 }}>
+                Invoice history isn't available yet — there is no invoice-list endpoint on the
+                backend today. Past invoices will appear here once that's implemented.
+              </p>
             </div>
           </div>
 

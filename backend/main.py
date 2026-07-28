@@ -54,9 +54,10 @@ from auth_routes import router as auth_router
 from privacy_routes import router as privacy_router
 from preference_routes import router as preference_router
 from dpdp_routes import router as dpdp_router
-from auth.models import User, Token, get_user_by_username, verify_password, tenants_db
+from auth.models import User, Token, seed_initial_data
 from auth.dependencies import get_current_active_user, get_admin_user
 from database import db
+from db_engine import init_db
 
 # Configure Structured Logging — now done via log_config.setup_logging()
 logger = logging.getLogger("priorityflow")
@@ -98,14 +99,8 @@ app.add_middleware(
 async def periodic_retention_policy():
     while True:
         # Enforce retention policy every 24 hours
-        db.enforce_retention_policy(days=30)
+        await db.enforce_retention_policy(days=30)
         await asyncio.sleep(24 * 60 * 60)
-
-async def periodic_db_save():
-    """Auto-save database every 5 minutes to persist data."""
-    while True:
-        await asyncio.sleep(300)  # 5 minutes
-        db.save_to_disk()
 
 def validate_secrets():
     required_secrets = [
@@ -123,10 +118,11 @@ def validate_secrets():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: validate secrets, start background tasks
+    # Startup: validate secrets, ensure schema exists, seed demo data, start background tasks
     validate_secrets()
+    await init_db()
+    await seed_initial_data()
     asyncio.create_task(periodic_retention_policy())
-    asyncio.create_task(periodic_db_save())
     logger.info(json.dumps({"event": "app_startup", "status": "started"}))
     yield
     # Shutdown: wait for background tasks to finish
@@ -228,7 +224,7 @@ async def readiness_check():
     
     # Check database connectivity
     try:
-        db.get_items("t-acme")  # quick ping
+        await db.get_items("t-acme")  # quick ping
         checks["database"] = "ok"
     except Exception as e:
         checks["database"] = f"error: {str(e)}"
@@ -294,15 +290,15 @@ async def create_item(request: Request, item: ItemCreate, current_user: User = D
         "metadata": item.metadata or {},
         "timestamp": time.time()
     }
-    db.add_item(item_data)
+    await db.add_item(item_data)
     await notify_new_items(tenant_id, 1)
     return item_data
 
 # Scoring Service Setup
-from services import scoring_service, archived_items, snoozed_items
+from services import scoring_service, split_archived_snoozed
 
-def _verify_item_ownership(item_id: str, tenant_id: str):
-    items = db.get_items(tenant_id)
+async def _verify_item_ownership(item_id: str, tenant_id: str):
+    items = await db.get_items(tenant_id)
     if not any(i["id"] == item_id for i in items):
         # Log anomaly: attempt to access data from another tenant
         logger.error(f"TENANT_LEAK_ATTEMPT: Attempt to access item {item_id} across tenant boundaries")
@@ -319,21 +315,18 @@ async def get_items(
     current_user: User = Depends(get_current_active_user)
 ):
     tenant_id = current_user.tenant_id
-    items = db.get_items(tenant_id)
-    
-    # Filter out archived and snoozed
+    items = await db.get_items(tenant_id)
+
+    # Filter out archived and snoozed, based on each item's own columns
     now = datetime.datetime.now()
-    tenant_archived = archived_items.get(tenant_id, set())
-    tenant_snoozed = snoozed_items.get(tenant_id, {})
-    
     active_items = []
     for item in items:
-        if item["id"] in tenant_archived:
+        if item.get("is_archived"):
             continue
-        if item["id"] in tenant_snoozed and tenant_snoozed[item["id"]] > now:
+        if item.get("is_snoozed") and item.get("snoozed_until") and item["snoozed_until"] > now:
             continue
         active_items.append(item)
-    
+
     return active_items
 
 @app.get("/priorities/feed")
@@ -344,67 +337,133 @@ async def get_priority_feed(
     current_user: User = Depends(get_current_active_user)
 ):
     tenant_id = current_user.tenant_id
-    items = db.get_items(tenant_id)
-    
-    contact_priorities = db.get_contact_priorities(tenant_id)
-    tenant_archived = archived_items.get(tenant_id, set())
-    tenant_snoozed = snoozed_items.get(tenant_id, {})
-    
-    scored_items = scoring_service.process_items(
+    items = await db.get_items(tenant_id)
+
+    contact_priorities = await db.get_contact_priorities(tenant_id)
+    tenant_archived, tenant_snoozed = split_archived_snoozed(items)
+
+    scored_items = await scoring_service.process_items(
         tenant_id,
-        items, 
-        tenant_archived, 
-        tenant_snoozed, 
+        items,
+        tenant_archived,
+        tenant_snoozed,
         contact_priorities
     )
-    
+
     if tier:
         scored_items = [i for i in scored_items if i["priorityTier"] == tier]
-    
+
     return scored_items
+
+class BulkItemIds(BaseModel):
+    item_ids: List[str]
+
+class BulkSnoozeRequest(BaseModel):
+    item_ids: List[str]
+    hours: int
+
+# NOTE: these two bulk routes must be registered BEFORE
+# /items/{item_id}/archive and /items/{item_id}/snooze below — otherwise
+# FastAPI's path matching would treat the literal segment "bulk" as an
+# {item_id} value and route bulk requests into the single-item handlers.
+@app.post("/items/bulk/archive")
+@limiter.limit("20/minute")
+async def bulk_archive_items(request: Request, body: BulkItemIds, current_user: User = Depends(get_current_active_user)):
+    tenant_id = current_user.tenant_id
+
+    # Verify tenant ownership per-id, skipping (not failing the whole batch on) any id
+    # that doesn't belong to this tenant.
+    valid_ids = []
+    for item_id in body.item_ids:
+        try:
+            await _verify_item_ownership(item_id, tenant_id)
+            valid_ids.append(item_id)
+        except HTTPException:
+            continue
+
+    archived_ids = await db.bulk_archive_items(tenant_id, valid_ids) if valid_ids else []
+
+    # One audit log entry for the whole batch, not one per item.
+    if archived_ids:
+        await db.add_audit_log(current_user.id, "bulk_archive_items", f"Archived {len(archived_ids)} items")
+
+    return {
+        "status": "success",
+        "message": f"Archived {len(archived_ids)} items",
+        "archived_count": len(archived_ids),
+        "item_ids": archived_ids,
+    }
+
+@app.post("/items/bulk/snooze")
+@limiter.limit("20/minute")
+async def bulk_snooze_items(
+    request: Request,
+    body: BulkSnoozeRequest,
+    current_user: User = Depends(get_current_active_user)
+):
+    tenant_id = current_user.tenant_id
+
+    valid_ids = []
+    for item_id in body.item_ids:
+        try:
+            await _verify_item_ownership(item_id, tenant_id)
+            valid_ids.append(item_id)
+        except HTTPException:
+            continue
+
+    until = datetime.datetime.now() + datetime.timedelta(hours=body.hours)
+    snoozed_ids = await db.bulk_snooze_items(tenant_id, valid_ids, until) if valid_ids else []
+
+    # One audit log entry for the whole batch, not one per item.
+    if snoozed_ids:
+        await db.add_audit_log(current_user.id, "bulk_snooze_items", f"Snoozed {len(snoozed_ids)} items for {body.hours}h")
+
+    return {
+        "status": "success",
+        "message": f"Snoozed {len(snoozed_ids)} items until {until}",
+        "snoozed_count": len(snoozed_ids),
+        "item_ids": snoozed_ids,
+        "snoozed_until": until.isoformat(),
+    }
 
 @app.post("/items/{item_id}/archive")
 @limiter.limit("30/minute")
 async def archive_item(request: Request, item_id: str, current_user: User = Depends(get_current_active_user)):
     tenant_id = current_user.tenant_id
-    _verify_item_ownership(item_id, tenant_id)
-    if tenant_id not in archived_items:
-        archived_items[tenant_id] = set()
-    archived_items[tenant_id].add(item_id)
-    
+    await _verify_item_ownership(item_id, tenant_id)
+    await db.archive_item(tenant_id, item_id)
+
     # Audit log
-    db.add_audit_log(current_user.id, "archive_item", f"Archived item {item_id}")
+    await db.add_audit_log(current_user.id, "archive_item", f"Archived item {item_id}")
     return {"status": "success", "message": f"Item {item_id} archived"}
 
 @app.post("/items/{item_id}/snooze")
 @limiter.limit("30/minute")
 async def snooze_item(
     request: Request,
-    item_id: str, 
+    item_id: str,
     hours: int = Body(..., embed=True),
     current_user: User = Depends(get_current_active_user)
 ):
     tenant_id = current_user.tenant_id
-    _verify_item_ownership(item_id, tenant_id)
-    if tenant_id not in snoozed_items:
-        snoozed_items[tenant_id] = {}
-    
+    await _verify_item_ownership(item_id, tenant_id)
+
     until = datetime.datetime.now() + datetime.timedelta(hours=hours)
-    snoozed_items[tenant_id][item_id] = until
-    
+    await db.snooze_item(tenant_id, item_id, until)
+
     # Audit log
-    db.add_audit_log(current_user.id, "snooze_item", f"Snoozed item {item_id} for {hours}h")
+    await db.add_audit_log(current_user.id, "snooze_item", f"Snoozed item {item_id} for {hours}h")
     return {"status": "success", "message": f"Item {item_id} snoozed until {until}"}
 
 @app.post("/items/{item_id}/unsnooze")
 @limiter.limit("30/minute")
 async def unsnooze_item(request: Request, item_id: str, current_user: User = Depends(get_current_active_user)):
     tenant_id = current_user.tenant_id
-    _verify_item_ownership(item_id, tenant_id)
-    if tenant_id in snoozed_items and item_id in snoozed_items[tenant_id]:
-        del snoozed_items[tenant_id][item_id]
+    await _verify_item_ownership(item_id, tenant_id)
+    was_snoozed = await db.unsnooze_item(tenant_id, item_id)
+    if was_snoozed:
         # Audit log
-        db.add_audit_log(current_user.id, "unsnooze_item", f"Unsnoozed item {item_id}")
+        await db.add_audit_log(current_user.id, "unsnooze_item", f"Unsnoozed item {item_id}")
     return {"status": "success", "message": f"Item {item_id} unsnoozed"}
 
 @app.get("/stats")
@@ -412,12 +471,15 @@ async def unsnooze_item(request: Request, item_id: str, current_user: User = Dep
 async def get_stats(request: Request, current_user: User = Depends(get_current_active_user)):
     tenant_id = current_user.tenant_id
     now = datetime.datetime.now()
-    tenant_archived = archived_items.get(tenant_id, set())
-    tenant_snoozed = snoozed_items.get(tenant_id, {})
-    active_snoozed = [id for id, until in tenant_snoozed.items() if until > now]
+    items = await db.get_items(tenant_id)
+    archived_count = sum(1 for i in items if i.get("is_archived"))
+    snoozed_count = sum(
+        1 for i in items
+        if i.get("is_snoozed") and i.get("snoozed_until") and i["snoozed_until"] > now
+    )
     return {
-        "archived_count": len(tenant_archived),
-        "snoozed_count": len(active_snoozed)
+        "archived_count": archived_count,
+        "snoozed_count": snoozed_count
     }
 
 if __name__ == "__main__":
