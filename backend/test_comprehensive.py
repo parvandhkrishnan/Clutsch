@@ -4,6 +4,7 @@ import time
 import json
 import unittest
 import threading
+import asyncio
 
 # Set environment variables for testing before importing app modules
 os.environ["JWT_SECRET_KEY"] = "test-jwt-secret"
@@ -13,10 +14,10 @@ os.environ["JOHN_PASSWORD"] = "password"
 os.environ["SARAH_PASSWORD"] = "sarah123"
 
 from fastapi.testclient import TestClient
-from main import app, connected_integrations, archived_items, snoozed_items
+from main import app
 from database import db
 from auth.jwt_handler import create_access_token, create_refresh_token, decode_access_token, decode_refresh_token
-from auth.models import users_db, tenants_db, get_user_by_username, verify_password, delete_user, get_tenant_by_id
+from auth.models import get_user_by_username, verify_password, delete_user, get_tenant_by_id, add_user
 from security import encrypt_secret, decrypt_secret, sanitize_pii
 from worker import background_worker
 from prioritizer import PriorityEngine
@@ -30,16 +31,13 @@ client = TestClient(app)
 class TestAuthRoutes(unittest.TestCase):
     def setUp(self):
         db.clear()
-        db.connected_integrations.clear()
-        archived_items.clear()
-        snoozed_items.clear()
         # Restore users if deleted by other tests
-        if not get_user_by_username("admin"):
-            from auth.models import User, pwd_context
-            users_db.append(User(
-                id="u-1", username="admin", email="admin@acme.com",
-                tenant_id="t-acme", role="admin",
-                hashed_password=pwd_context.hash("admin123"), mfa_enabled=True
+        if not asyncio.run(get_user_by_username("admin")):
+            from auth.models import pwd_context
+            asyncio.run(add_user(
+                username="admin", email="admin@acme.com", password="",
+                hashed_password=pwd_context.hash("admin123"),
+                tenant_id="t-acme", role="admin"
             ))
 
     def test_login_success(self):
@@ -80,9 +78,6 @@ class TestAuthRoutes(unittest.TestCase):
 class TestMainEndpoints(unittest.TestCase):
     def setUp(self):
         db.clear()
-        db.connected_integrations.clear()
-        archived_items.clear()
-        snoozed_items.clear()
         self.token = create_access_token({"user_id": "u-2", "tenant_id": "t-acme", "role": "user"})
         self.headers = {"Authorization": f"Bearer {self.token}"}
         db.add_item({"id": "item-1", "tenant_id": "t-acme", "text": "Test item", "source": "gmail"})
@@ -123,7 +118,9 @@ class TestMainEndpoints(unittest.TestCase):
         resp = client.post("/items/item-1/archive", headers=self.headers)
         self.assertEqual(resp.status_code, 200)
         self.assertIn("archived", resp.json()["message"])
-        self.assertIn("item-1", archived_items.get("t-acme", set()))
+        items = asyncio.run(db.get_items("t-acme"))
+        archived_ids = {i["id"] for i in items if i.get("is_archived")}
+        self.assertIn("item-1", archived_ids)
 
     def test_snooze_item(self):
         resp = client.post("/items/item-1/snooze", json={"hours": 2}, headers=self.headers)
@@ -153,7 +150,8 @@ class TestMainEndpoints(unittest.TestCase):
         resp = client.post("/integrations/gmail/connect", json={"token": "gmail-token-123"}, headers=self.headers)
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()["status"], "success")
-        stored = db.connected_integrations["t-acme"]["gmail"]
+        stored_all = asyncio.run(db.get_connected_integrations("t-acme"))
+        stored = stored_all["gmail"]
         self.assertNotEqual(stored["token"], "gmail-token-123")  # Should be encrypted
 
     def test_connect_integration_invalid_provider(self):
@@ -174,9 +172,6 @@ class TestMainEndpoints(unittest.TestCase):
 class TestPrivacyRoutes(unittest.TestCase):
     def setUp(self):
         db.clear()
-        db.connected_integrations.clear()
-        archived_items.clear()
-        snoozed_items.clear()
         self.token = create_access_token({"user_id": "u-2", "tenant_id": "t-acme", "role": "user"})
         self.headers = {"Authorization": f"Bearer {self.token}"}
         db.add_item({"id": "priv-1", "tenant_id": "t-acme", "text": "Private note", "source": "manual"})
@@ -345,47 +340,40 @@ class TestJWTHandler(unittest.TestCase):
 
 class TestAuthModels(unittest.TestCase):
     def test_get_user_by_username(self):
-        user = get_user_by_username("admin")
+        user = asyncio.run(get_user_by_username("admin"))
         self.assertIsNotNone(user)
         self.assertEqual(user.username, "admin")
 
     def test_get_user_by_username_not_found(self):
-        self.assertIsNone(get_user_by_username("nobody"))
+        self.assertIsNone(asyncio.run(get_user_by_username("nobody")))
 
     def test_verify_password(self):
-        user = get_user_by_username("admin")
+        user = asyncio.run(get_user_by_username("admin"))
         self.assertTrue(verify_password("admin123", user.hashed_password))
         self.assertFalse(verify_password("wrong", user.hashed_password))
 
     def test_delete_user(self):
-        from auth.models import User, pwd_context
-        users_db.append(User(
-            id="u-test", username="testuser", email="test@test.com",
-            tenant_id="t-test", role="user",
-            hashed_password=pwd_context.hash("testpass"), mfa_enabled=False
+        from auth.models import pwd_context
+        created = asyncio.run(add_user(
+            username="testuser", email="test@test.com", password="",
+            hashed_password=pwd_context.hash("testpass"),
+            tenant_id="t-test", role="user"
         ))
-        self.assertIsNotNone(get_user_by_username("testuser"))
-        delete_user("u-test")
-        self.assertIsNone(get_user_by_username("testuser"))
+        self.assertIsNotNone(asyncio.run(get_user_by_username("testuser")))
+        asyncio.run(delete_user(created.id))
+        self.assertIsNone(asyncio.run(get_user_by_username("testuser")))
 
     def test_get_tenant_by_id(self):
-        tenant = get_tenant_by_id("t-acme")
+        tenant = asyncio.run(get_tenant_by_id("t-acme"))
         self.assertIsNotNone(tenant)
         self.assertEqual(tenant.name, "Acme Corp")
 
     def test_get_tenant_by_id_not_found(self):
-        self.assertIsNone(get_tenant_by_id("t-unknown"))
+        self.assertIsNone(asyncio.run(get_tenant_by_id("t-unknown")))
 
 class TestDatabase(unittest.TestCase):
     def setUp(self):
         db.clear()
-        db.connected_integrations.clear()
-        db.archived_items.clear()
-        db.snoozed_items.clear()
-        db.contact_priorities.clear()
-        db.user_consents.clear()
-        db.nominees.clear()
-        db.grievance_logs.clear()
 
     def test_add_and_get_items(self):
         db.add_item({"id": "d1", "tenant_id": "t1", "text": "Hello", "source": "gmail"})

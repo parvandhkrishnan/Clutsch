@@ -5,11 +5,13 @@ Tests: feed ordering, snooze, consent, deduplication, and scoring offloading.
 import os
 import time
 import uuid
+import asyncio
+import datetime
 import pytest
 from fastapi.testclient import TestClient
 from main import app
 from database import db
-from services import scoring_service, archived_items, snoozed_items
+from services import scoring_service, split_archived_snoozed
 
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret")
 os.environ.setdefault("ENCRYPTION_KEY", "N0ZPaUZrRUZXSm5yYVpwUnVpYm9hckhLcm9LdER3SDA=")
@@ -78,8 +80,6 @@ def test_feed_ordering():
 def test_snooze_basic():
     """Snoozing an item removes it from the feed for the specified duration."""
     db.clear()
-    archived_items.clear()
-    snoozed_items.clear()
     token = get_token()
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -107,8 +107,6 @@ def test_snooze_basic():
 def test_snooze_duration_choices():
     """User can snooze for 1h, 4h, or 24h — verify the API contract."""
     db.clear()
-    archived_items.clear()
-    snoozed_items.clear()
     token = get_token()
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -131,8 +129,6 @@ def test_snooze_duration_choices():
 def test_snooze_reappears():
     """Item should reappear in the feed once the snooze period expires."""
     db.clear()
-    archived_items.clear()
-    snoozed_items.clear()
     token = get_token()
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -150,8 +146,13 @@ def test_snooze_reappears():
     resp = client.get("/priorities/feed", headers=headers)
     assert "snooze-reappear" not in {i["id"] for i in resp.json()}
 
-    # Mock the snooze expiry by clearing snoozed_items
-    snoozed_items.clear()
+    # Simulate the snooze period actually expiring: directly push the item's
+    # own snoozed_until column into the past (it's still marked is_snoozed,
+    # only the deadline has elapsed), which is exactly the condition
+    # split_archived_snoozed() + scoring_service.process_items()'s
+    # `snoozed_until > now` check use to decide whether an item is still
+    # hidden. This is a real state change via the async db, not a dict clear.
+    asyncio.run(db.snooze_item("t-acme", "snooze-reappear", datetime.datetime.now() - datetime.timedelta(seconds=1)))
 
     # Verify it reappears
     resp = client.get("/priorities/feed", headers=headers)
@@ -359,7 +360,6 @@ def test_feed_response_has_explanations():
 def test_feed_does_not_include_archived():
     """Archived items should not appear in the priority feed."""
     db.clear()
-    archived_items.clear()
     token = get_token()
     headers = {"Authorization": f"Bearer {token}"}
 

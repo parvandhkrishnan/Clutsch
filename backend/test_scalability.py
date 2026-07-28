@@ -9,7 +9,8 @@ os.environ["ADMIN_PASSWORD"] = "admin123"
 os.environ["JOHN_PASSWORD"] = "password"
 os.environ["SARAH_PASSWORD"] = "sarah123"
 
-from main import app, connected_integrations, integration_cache
+from main import app
+from utils.cache import integration_cache
 
 
 from auth.jwt_handler import create_access_token
@@ -23,7 +24,6 @@ client = TestClient(app)
 class TestScalability(unittest.TestCase):
     def setUp(self):
         db.clear()
-        connected_integrations.clear()
         integration_cache.cache.clear()
         
         # Setup tokens

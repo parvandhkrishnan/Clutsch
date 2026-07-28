@@ -17,7 +17,7 @@ async def test_refresh():
         "token_expiry": expired_expiry,
         "settings": {"enabled": True}
     }
-    db.connected_integrations[tenant_id][provider] = config
+    await db.connect_integration(tenant_id, provider, config)
     
     print(f"Initial expiry: {expired_expiry}")
     

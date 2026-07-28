@@ -2,6 +2,7 @@ import unittest
 import json
 import os
 import time
+import asyncio
 
 # Set environment variables for testing before importing app modules
 os.environ["JWT_SECRET_KEY"] = "test-jwt-secret"
@@ -26,8 +27,7 @@ class TestSecurity(unittest.TestCase):
     def setUp(self):
         # Clear mock DB
         db.clear()
-        db.connected_integrations.clear()
-        
+
         # Create a test item for Tenant A (u-2/t-acme)
         self.token_a = create_access_token({"sub": "john", "user_id": "u-2", "tenant_id": "t-acme"})
         self.headers_a = {"Authorization": f"Bearer {self.token_a}"}
@@ -64,7 +64,7 @@ class TestSecurity(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         
         # Check 'database' (connected_integrations)
-        stored_data = db.connected_integrations["t-acme"][provider]
+        stored_data = asyncio.run(db.get_connected_integrations("t-acme"))[provider]
         stored_token = stored_data["token"]
         
         # It should be encrypted (not equal to raw)
@@ -141,19 +141,19 @@ class TestSecurity(unittest.TestCase):
         for _ in range(3):
             client.post("/auth/login", data={"username": username, "password": "wrong-password"})
         
-        self.assertEqual(len(db.failed_login_attempts.get("u-2", [])), 3)
-        
+        self.assertEqual(asyncio.run(db.count_recent_failed_logins("u-2", 0)), 3)
+
         # 1 successful login
         resp = client.post("/auth/login", data={"username": username, "password": "password"})
         self.assertEqual(resp.status_code, 200)
-        
+
         # Failed attempts should be cleared
-        self.assertEqual(len(db.failed_login_attempts.get("u-2", [])), 0)
+        self.assertEqual(asyncio.run(db.count_recent_failed_logins("u-2", 0)), 0)
 
     def test_admin_can_unlock_user(self):
         """Verify that an admin can manually unlock a locked account."""
         # 1. Lock John's account
-        db.locked_accounts["u-2"] = time.time() + 1000
+        asyncio.run(db.lock_account("u-2", time.time() + 1000))
         
         # 2. Verify it's locked
         resp = client.post("/auth/login", data={"username": "john", "password": "password"})

@@ -5,6 +5,7 @@ Tests: granular consent, GDPR data subject rights, CCPA Do Not Sell, DPA, erasur
 import os
 import time
 import json
+import asyncio
 import pytest
 from fastapi.testclient import TestClient
 from main import app
@@ -303,8 +304,9 @@ class TestErasureCascade:
         }
 
         # 7. Failed login attempts
-        db.failed_login_attempts[user_id] = [time.time() - 10, time.time() - 5]
-        db.locked_accounts[user_id] = time.time() + 300
+        asyncio.run(db.record_failed_login(user_id))
+        asyncio.run(db.record_failed_login(user_id))
+        asyncio.run(db.lock_account(user_id, time.time() + 300))
 
         # 8. Cache
         config_cache.set(f"user:{user_id}", {"data": "test"}, tags=[f"user:{user_id}"])
@@ -319,8 +321,8 @@ class TestErasureCascade:
         assert user_id in db.delegations or any(
             d.get("assigned_to") == user_id for d in db.delegations.values()
         )
-        assert user_id in db.failed_login_attempts
-        assert user_id in db.locked_accounts
+        assert asyncio.run(db.count_recent_failed_logins(user_id, 0)) > 0
+        assert asyncio.run(db.get_lockout_expiry(user_id)) is not None
 
         # Execute erasure via GDPR Art. 17
         resp = client.delete("/gdpr/erase", headers=headers())
@@ -355,8 +357,8 @@ class TestErasureCascade:
         ), "Delegations not erased"
 
         # 8. Locked accounts / failed attempts
-        assert user_id not in db.failed_login_attempts, "Failed login attempts not erased"
-        assert user_id not in db.locked_accounts, "Locked account not erased"
+        assert asyncio.run(db.count_recent_failed_logins(user_id, 0)) == 0, "Failed login attempts not erased"
+        assert asyncio.run(db.get_lockout_expiry(user_id)) is None, "Locked account not erased"
 
         # 9. Cache
         assert config_cache.get(f"user:{user_id}") is None, "Cache not invalidated"

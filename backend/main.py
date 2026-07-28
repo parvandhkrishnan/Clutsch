@@ -190,7 +190,7 @@ from razorpay_routes import router as razorpay_router
 app.include_router(razorpay_router)
 from custom_integration_routes import router as custom_integration_router
 app.include_router(custom_integration_router)
-from realtime_routes import router as realtime_router
+from realtime_routes import router as realtime_router, notify_new_items
 app.include_router(realtime_router)
 from workflow_routes import router as workflow_router
 app.include_router(workflow_router)

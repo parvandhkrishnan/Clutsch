@@ -4,6 +4,7 @@ Tests: secrets validation, CORS, rate limiting, brute-force, MFA, encryption at 
 """
 import os
 import time
+import asyncio
 import pytest
 from fastapi.testclient import TestClient
 from main import app
@@ -168,9 +169,7 @@ def test_register_rate_limited():
 def test_brute_force_account_lockout():
     """Account should lock after N failed login attempts."""
     db.clear()
-    db.failed_login_attempts.clear()
-    db.locked_accounts.clear()
-    
+
     # Use a lower threshold so we don't exceed the rate limiter (5/min)
     os.environ["MAX_LOGIN_ATTEMPTS"] = "3"
     import auth_routes
@@ -197,17 +196,14 @@ def test_brute_force_account_lockout():
 def test_brute_force_audit_logging():
     """Brute force attempts should be logged."""
     db.clear()
-    db.failed_login_attempts.clear()
-    db.locked_accounts.clear()
-    db.audit_logs.clear()
-    
+
     max_attempts = int(os.environ.get("MAX_LOGIN_ATTEMPTS", 5))
     
     for i in range(max_attempts + 1):
         client.post("/auth/login", data={"username": "john", "password": "wrong"})
     
     # Check audit logs for lockout
-    lockout_logs = [log for log in db.audit_logs if log["action"] == "account_lockout"]
+    lockout_logs = [log for log in asyncio.run(db.get_audit_logs("t-acme")) if log["action"] == "account_lockout"]
     assert len(lockout_logs) >= 1, "Expected at least 1 lockout audit log"
 
 
@@ -352,14 +348,13 @@ def test_integration_tokens_encrypted_at_rest():
     })
     
     # Check the raw stored data
-    with db._lock:
-        stored = db.connected_integrations["t-acme"]["test_provider"]
-        # 'token' and 'refresh_token' should be encrypted (Fernet format)
-        assert stored["token"].startswith("gAAAAA"), f"Expected encrypted token, got: {stored['token']}"
-        assert stored["refresh_token"].startswith("gAAAAA"), f"Expected encrypted refresh_token, got: {stored['refresh_token']}"
-        # Non-sensitive fields should be plaintext
-        assert stored["enabled"] == True
-        assert stored["sync_frequency"] == 15
+    stored = asyncio.run(db.get_connected_integrations("t-acme"))["test_provider"]
+    # 'token' and 'refresh_token' should be encrypted (Fernet format)
+    assert stored["token"].startswith("gAAAAA"), f"Expected encrypted token, got: {stored['token']}"
+    assert stored["refresh_token"].startswith("gAAAAA"), f"Expected encrypted refresh_token, got: {stored['refresh_token']}"
+    # Non-sensitive fields should be plaintext
+    assert stored["enabled"] == True
+    assert stored["sync_frequency"] == 15
     
     # Reading via get_integration_config should return decrypted values
     config = db.get_integration_config("t-acme", "test_provider")
@@ -376,9 +371,7 @@ def test_integration_tokens_encrypted_at_rest():
 def test_successful_login():
     """A non-MFA user should be able to login successfully."""
     db.clear()
-    db.failed_login_attempts.clear()
-    db.locked_accounts.clear()
-    
+
     resp = client.post("/auth/login", data={"username": "sarah", "password": "sarah123"})
     assert resp.status_code == 200
     data = resp.json()
