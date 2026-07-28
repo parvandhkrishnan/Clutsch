@@ -145,17 +145,17 @@ def test_workflow_engine():
         from integration_routes import sync_all_integrations
         asyncio.run(sync_all_integrations("t-acme"))
     
-    # 4. Check results
-    from services import archived_items
-    print(f"Archived items: {archived_items.get('t-acme', set())}")
-    
-    # Let's check the items in DB to see their scores
+    # 4. Check results — archived state now lives on each item's own
+    # is_archived column (see models.py), not a separate in-memory dict.
     db_items = asyncio.run(db.get_items("t-acme"))
     for item in db_items:
         print(f"Item {item['id']} score: {item.get('priorityScore')}")
 
-    assert "low-p" in archived_items.get("t-acme", set())
-    assert "high-p" not in archived_items.get("t-acme", set())
+    archived_ids = {i["id"] for i in db_items if i.get("is_archived")}
+    print(f"Archived items: {archived_ids}")
+
+    assert "low-p" in archived_ids
+    assert "high-p" not in archived_ids
     
     print("Workflow Engine test passed!")
 

@@ -317,10 +317,16 @@ class TestErasureCascade:
         from auth.models import get_users_db
         from utils.cache import config_cache
 
-        # Get John's user ID
+        # Get John's user ID, and a valid auth token up front — this test
+        # locks john's account further down to verify erasure clears the
+        # lockout, but a *new* login (headers() calling get_token() again)
+        # would then correctly be rejected as locked. An existing JWT stays
+        # valid regardless of lockout state (lockout only blocks future
+        # login attempts), so grab and reuse one token throughout.
         john = [u for u in asyncio.run(get_users_db()) if u.username == "john"][0]
         user_id = john.id
         tenant_id = john.tenant_id
+        auth_headers = headers()
 
         # Pre-populate data across all layers
         # 1. Items — the real Item schema is tenant-scoped only (no
@@ -373,7 +379,7 @@ class TestErasureCascade:
         assert asyncio.run(db.get_lockout_expiry(user_id)) is not None
 
         # Execute erasure via GDPR Art. 17
-        resp = client.delete("/gdpr/erase", headers=headers())
+        resp = client.delete("/gdpr/erase", headers=auth_headers)
         assert resp.status_code == 200
 
         # === VERIFY EVERY LAYER IS CLEAN ===

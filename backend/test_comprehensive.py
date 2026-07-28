@@ -222,8 +222,15 @@ class TestPrivacyRoutes(unittest.TestCase):
         resp = client.delete("/privacy/account", headers=self.headers)
         self.assertEqual(resp.status_code, 200)
         self.assertIn("deleted", resp.json()["message"].lower())
-        # Verify data gone
-        self.assertEqual(len(asyncio.run(db.get_items("t-acme"))), 0)
+        # Items are tenant-owned (shared team data), not personal to the
+        # deleting user — deleting one person's account must NOT wipe
+        # their whole team's items (privacy_routes.py deliberately calls
+        # delete_user_data(), not delete_tenant_data(), specifically to
+        # avoid this). The item created in setUp should still be there.
+        self.assertEqual(len(asyncio.run(db.get_items("t-acme"))), 1)
+        # The deleted user itself should be gone.
+        from auth.models import get_user_by_id
+        self.assertIsNone(asyncio.run(get_user_by_id("u-2")))
 
     def test_audit_logs(self):
         asyncio.run(db.add_audit_log("u-2", "TEST_ACTION", "Test details"))

@@ -190,14 +190,23 @@ class MockDatabase:
                 if "id" not in item:
                     item["id"] = str(uuid.uuid4())
                 fields = _item_fields_from_dict(item)
-                result = await session.execute(
-                    select(Item).where(
-                        Item.source == fields["source"],
-                        Item.external_id == fields["external_id"],
-                        Item.tenant_id == fields["tenant_id"],
+                # Only look up an existing row when there's a real external_id
+                # to match on. `Item.external_id == None` compiles to `IS
+                # NULL`, which would match ANY prior item from the same
+                # source/tenant that also has no external_id — silently
+                # collapsing unrelated items (e.g. manually created ones)
+                # into a single overwritten row instead of inserting each
+                # one distinctly.
+                existing = None
+                if fields["external_id"] is not None:
+                    result = await session.execute(
+                        select(Item).where(
+                            Item.source == fields["source"],
+                            Item.external_id == fields["external_id"],
+                            Item.tenant_id == fields["tenant_id"],
+                        )
                     )
-                )
-                existing = result.scalar_one_or_none()
+                    existing = result.scalar_one_or_none()
                 ts = _parse_timestamp(item.get("timestamp"))
                 if existing:
                     for key, value in fields.items():
