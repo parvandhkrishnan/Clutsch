@@ -32,17 +32,12 @@ jobs:
         run: npm ci
 
       - name: Lint
-        # continue-on-error: this surfaced 121 pre-existing lint errors
-        # across the whole frontend on first run — real, but far larger
-        # than this CI setup's scope (mostly unused imports, but a
-        # meaningful minority are genuine React issues: components created
-        # during render, setState called synchronously in effects,
-        # variables accessed before declaration). Non-blocking for now so
-        # CI can actually gate real breakage (build/tests) rather than
-        # being permanently red; tracked as separate follow-up work, not
-        # silently ignored — see the run's annotations for the full list.
+        # All 121 originally-surfaced errors are fixed (see git history).
+        # Genuinely blocking now — the two rules that reflect deliberate
+        # architectural choices rather than bugs (react-hooks/set-state-in-effect,
+        # react-hooks/purity) are downgraded to warnings in eslint.config.js,
+        # with the reasoning documented there, not silenced here.
         run: npm run lint
-        continue-on-error: true
 
       - name: Run test suite
         run: npm run test
