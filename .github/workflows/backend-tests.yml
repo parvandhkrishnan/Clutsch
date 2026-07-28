@@ -34,6 +34,11 @@ jobs:
       # Ephemeral CI-only database — destroyed with the runner, never
       # reused, so a fixed password here is not a real secret.
       DATABASE_URL: postgresql+asyncpg://clutsch:clutsch_test@localhost:5432/clutsch_test
+      # See db_engine.py: pytest/TestClient doesn't guarantee one persistent
+      # event loop across calls, which pooled asyncpg connections can't
+      # survive. NullPool avoids the "attached to a different loop" errors
+      # this caused.
+      SQLALCHEMY_NULL_POOL: "true"
       ADMIN_PASSWORD: ci-admin-test-password-only
       JOHN_PASSWORD: ci-john-test-password-only
       SARAH_PASSWORD: ci-sarah-test-password-only
