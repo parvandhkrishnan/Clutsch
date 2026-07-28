@@ -14,7 +14,6 @@ from auth.models import User
 from database import db
 from security import encrypt_secret, decrypt_secret
 from utils.retries import async_retry_with_backoff
-from worker import background_worker
 from adapters.gmail import GmailAdapter
 from adapters.slack import SlackAdapter
 from adapters.whatsapp import WhatsAppAdapter
@@ -227,10 +226,34 @@ async def trigger_sync(
     current_user: User = Depends(get_current_active_user)
 ):
     tenant_id = current_user.tenant_id
-    task_id = background_worker.enqueue(sync_all_integrations_sync, tenant_id)
+    task_id = str(uuid.uuid4())
+    # sync_all_integrations is pure I/O (network + DB calls), so it runs as
+    # a native asyncio background task on this request's own event loop —
+    # NOT on a separate thread with a freshly created event loop (the old
+    # sync_all_integrations_sync approach). That mattered: the DB engine's
+    # connection pool (db_engine.py) is a single process-wide object whose
+    # asyncpg connections are bound to whichever event loop first used
+    # them. A separate thread creating its own new loop per call — and the
+    # pool handing that loop a connection previously opened on the main
+    # app's loop, or vice versa — crashes with "attached to a different
+    # loop" / "Event loop is closed". Scheduling on the same loop as
+    # everything else sidesteps the problem entirely rather than working
+    # around it.
+    asyncio.create_task(_run_sync_task(tenant_id, task_id))
 
     await db.add_audit_log(current_user.id, "trigger_sync", "Triggered manual sync")
     return {"message": "Sync triggered", "status": "processing", "task_id": task_id}
+
+
+async def _run_sync_task(tenant_id: str, task_id: str):
+    """Fire-and-forget wrapper: asyncio silently swallows exceptions from a
+    Task nobody awaits (they'd otherwise only surface as a "Task exception
+    was never retrieved" warning at garbage-collection time) — log them
+    properly instead."""
+    try:
+        await sync_all_integrations(tenant_id)
+    except Exception as e:
+        logger.error(f"SYNC_TASK_FAILED: tenant={tenant_id} task_id={task_id}: {e}")
 
 # Helper Functions
 async def exchange_code_for_tokens(provider: str, code: str) -> Dict[str, Any]:
@@ -349,8 +372,3 @@ async def sync_all_integrations(tenant_id: str):
     if total_items:
         await notify_new_items(tenant_id, len(total_items))
 
-def sync_all_integrations_sync(tenant_id: str):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(sync_all_integrations(tenant_id))
-    loop.close()
