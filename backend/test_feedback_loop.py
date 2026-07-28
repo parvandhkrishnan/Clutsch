@@ -7,7 +7,7 @@ import time
 
 def test_priority_feedback_loop():
     client = TestClient(app)
-    db.clear()
+    asyncio.run(db.clear())
     
     # 1. Login
     response = client.post("/auth/login", data={"username": "admin", "password": "admin123"})
@@ -28,7 +28,7 @@ def test_priority_feedback_loop():
         "timestamp": time.time(),
         "priorityTier": "medium" # Assume it was ranked medium
     }
-    db.add_item(item_data)
+    asyncio.run(db.add_item(item_data))
     
     # 4. Submit correction feedback (should be higher)
     feedback_data = {

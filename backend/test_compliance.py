@@ -20,11 +20,56 @@ os.environ.setdefault("SARAH_PASSWORD", "sarah123")
 
 client = TestClient(app)
 
+# Several tests in this file (TestCCPA.test_ccpa_delete, TestErasureCascade,
+# TestComplianceAudit.test_audit_log_not_erasable_by_erasure) exercise
+# /gdpr/erase or /ccpa/delete (which reuses the same cascade), which
+# permanently deletes the calling user's row via auth.models.delete_user().
+# auth.models.seed_initial_data() only reseeds when the users table is
+# completely empty, so once "john" is deleted mid-suite it stays gone —
+# admin/sarah still exist, so the empty-check no-ops. Every other test that
+# logs in via the default get_token()/headers() (username="john") would then
+# fail to authenticate. Recreate a deleted seed user on demand before
+# attempting login, mirroring the "Restore users if deleted by other tests"
+# pattern already used in test_comprehensive.py.
+_SEED_USER_INFO = {
+    "john": {"email": "john@acme.com", "tenant_id": "t-acme", "role": "user"},
+    "admin": {"email": "admin@acme.com", "tenant_id": "t-acme", "role": "admin"},
+    "sarah": {"email": "sarah@globex.com", "tenant_id": "t-globex", "role": "admin"},
+}
+
+
+def _ensure_seed_user_exists(username, password):
+    info = _SEED_USER_INFO.get(username)
+    if info is None:
+        return
+    from auth.models import get_user_by_username, add_user
+    if asyncio.run(get_user_by_username(username)) is None:
+        asyncio.run(add_user(
+            username=username, email=info["email"], password=password,
+            tenant_id=info["tenant_id"], role=info["role"],
+        ))
+
 
 def get_token(username="john", password="password"):
+    _ensure_seed_user_exists(username, password)
     resp = client.post("/auth/login", data={"username": username, "password": password})
     assert resp.status_code == 200, f"Login failed: {resp.text}"
     return resp.json()["access_token"]
+
+
+@pytest.fixture(autouse=True)
+def _restore_deleted_seed_users():
+    """Runs before every test in this module (after conftest.py's own
+    autouse reset_state fixture, which resets tenant-scoped data and seeds
+    from empty). Some tests here (TestCCPA.test_ccpa_delete,
+    TestErasureCascade, TestComplianceAudit.test_audit_log_not_erasable_by_erasure)
+    look up "john" directly via auth.models.get_users_db() before ever
+    calling get_token()/headers(), so the lazy restore in
+    _ensure_seed_user_exists() (triggered from get_token()) would run too
+    late for those. Proactively restore any deleted seed user up front."""
+    for username, password in (("john", "password"), ("admin", "admin123"), ("sarah", "sarah123")):
+        _ensure_seed_user_exists(username, password)
+    yield
 
 
 def get_admin_token():
@@ -173,7 +218,7 @@ class TestGDPR:
         # Verify restriction is stored
         assert hasattr(db, 'processing_restrictions')
         from auth.models import get_users_db
-        john = [u for u in get_users_db() if u.username == "john"][0]
+        john = [u for u in asyncio.run(get_users_db()) if u.username == "john"][0]
         assert db.processing_restrictions[john.id]["restricted"] is True
 
         # Lift restriction
@@ -269,39 +314,41 @@ class TestErasureCascade:
         """Erasure must delete user data from every storage layer: users, items, 
         consent records, nominee, grievances, MFA, cache, delegations, locked accounts.
         """
-        from auth.models import get_users_db, _users_db
+        from auth.models import get_users_db
         from utils.cache import config_cache
 
         # Get John's user ID
-        john = [u for u in get_users_db() if u.username == "john"][0]
+        john = [u for u in asyncio.run(get_users_db()) if u.username == "john"][0]
         user_id = john.id
         tenant_id = john.tenant_id
 
         # Pre-populate data across all layers
-        # 1. Items
-        db.add_item({"id": "item-1", "user_id": user_id, "tenant_id": tenant_id, "title": "John's item"})
+        # 1. Items — the real Item schema is tenant-scoped only (no
+        # user_id/assigned_to column), so we just create a real item here
+        # to exercise the delegation flow and to confirm /gdpr/erase (a
+        # per-user erasure) leaves tenant-scoped items alone (see note below).
+        asyncio.run(db.add_item({"id": "item-1", "tenant_id": tenant_id, "text": "John's item", "source": "manual"}))
 
         # 2. Consent records
-        db.record_consent(user_id, {"version": "1.0", "purpose": "test"})
+        asyncio.run(db.record_consent(user_id, {"version": "1.0", "purpose": "test"}))
 
         # 3. Nominee
-        db.set_nominee(user_id, {"name": "Jane", "email": "jane@test.com", "relationship": "friend"})
+        asyncio.run(db.set_nominee(user_id, {"name": "Jane", "email": "jane@test.com", "relationship": "friend"}))
 
         # 4. Grievance
-        db.add_grievance({"user_id": user_id, "subject": "test", "description": "test grievance", "status": "open"})
+        asyncio.run(db.add_grievance({"user_id": user_id, "tenant_id": tenant_id, "subject": "test", "description": "test grievance", "status": "open"}))
 
         # 5. MFA
-        db.set_mfa_secret(user_id, "test-secret")
-        db.set_mfa_pending_secret(user_id, "pending-secret")
-        db.set_mfa_recovery_codes(user_id, ["code1", "code2"])
+        asyncio.run(db.set_mfa_secret(user_id, "test-secret"))
+        asyncio.run(db.set_mfa_pending_secret(user_id, "pending-secret"))
+        asyncio.run(db.set_mfa_recovery_codes(user_id, ["code1", "code2"]))
 
-        # 6. Delegation — set directly to avoid item existence check in delegate_item
-        db.delegations["item-delegated"] = {
-            "assigned_to": user_id,
-            "assigned_by": "admin",
-            "note": "test note",
-            "timestamp": time.time()
-        }
+        # 6. Delegation — Delegation is now a real SQL table only reachable
+        # via db.delegate_item()/db.get_delegation(), and delegate_item()
+        # validates the item exists first. Create a second real item, then
+        # delegate it for real instead of bypassing the check.
+        asyncio.run(db.add_item({"id": "item-delegated", "tenant_id": tenant_id, "text": "test", "source": "manual"}))
+        asyncio.run(db.delegate_item("item-delegated", tenant_id, user_id, "admin", "test note"))
 
         # 7. Failed login attempts
         asyncio.run(db.record_failed_login(user_id))
@@ -312,15 +359,14 @@ class TestErasureCascade:
         config_cache.set(f"user:{user_id}", {"data": "test"}, tags=[f"user:{user_id}"])
 
         # Verify data exists before erasure
-        assert any(u.id == user_id for u in get_users_db())
-        assert any(i.get("user_id") == user_id for i in db.get_items(tenant_id))
-        assert len(db.get_consents(user_id)) > 0
-        assert db.get_nominee(user_id) is not None
-        assert len(db.get_grievances(user_id)) > 0
-        assert db.get_mfa_secret(user_id) is not None
-        assert user_id in db.delegations or any(
-            d.get("assigned_to") == user_id for d in db.delegations.values()
-        )
+        assert any(u.id == user_id for u in asyncio.run(get_users_db()))
+        assert any(i["id"] == "item-1" for i in asyncio.run(db.get_items(tenant_id)))
+        assert len(asyncio.run(db.get_consents(user_id))) > 0
+        assert asyncio.run(db.get_nominee(user_id)) is not None
+        assert len(asyncio.run(db.get_grievances(user_id))) > 0
+        assert asyncio.run(db.get_mfa_secret(user_id)) is not None
+        delegation = asyncio.run(db.get_delegation("item-delegated"))
+        assert delegation is not None and delegation["assigned_to"] == user_id
         assert asyncio.run(db.count_recent_failed_logins(user_id, 0)) > 0
         assert asyncio.run(db.get_lockout_expiry(user_id)) is not None
 
@@ -330,31 +376,38 @@ class TestErasureCascade:
 
         # === VERIFY EVERY LAYER IS CLEAN ===
         # 1. User record
-        assert not any(u.id == user_id for u in get_users_db()), "User record not erased"
+        assert not any(u.id == user_id for u in asyncio.run(get_users_db())), "User record not erased"
 
-        # 2. Items
-        assert not any(i.get("user_id") == user_id for i in db.get_items(tenant_id)), "Items not erased"
+        # 2. Items — per gdpr_routes.py's gdpr_erase() docstring, per-owner
+        # item erasure is intentionally a no-op in the real schema: Item has
+        # no user_id/assigned_to column, so there is nothing to filter on for
+        # a single user within a shared tenant. Tenant-wide item erasure only
+        # happens via account deletion (delete_tenant_data), not /gdpr/erase.
+        # So the item legitimately remains after a per-user erasure.
+        assert any(i["id"] == "item-1" for i in asyncio.run(db.get_items(tenant_id))), \
+            "Item unexpectedly removed by per-user erasure (items are tenant-scoped, not user-scoped)"
 
         # 3. Consent records
-        assert len(db.get_consents(user_id)) == 0, "Consent records not erased"
+        assert len(asyncio.run(db.get_consents(user_id))) == 0, "Consent records not erased"
 
         # 4. Nominee
-        assert db.get_nominee(user_id) is None, "Nominee not erased"
+        assert asyncio.run(db.get_nominee(user_id)) is None, "Nominee not erased"
 
-        # 5. Grievances (anonymized, not deleted)
-        grievances = db.get_grievances(user_id)
-        for g in grievances:
-            assert g.get("user_id") == "**ERASED**", "Grievance not anonymized"
+        # 5. Grievances — unlike the old in-memory mock (which anonymized
+        # with a "**ERASED**" sentinel), the real Grievance.user_id column is
+        # a NOT NULL FK, so database.py's delete_user_data() deletes
+        # grievance rows outright instead. Verify none remain for this user.
+        grievances = asyncio.run(db.get_grievances(user_id))
+        assert grievances == [], "Grievances not erased"
 
         # 6. MFA secrets
-        assert db.get_mfa_secret(user_id) is None, "MFA secret not erased"
-        assert db.get_mfa_pending_secret(user_id) is None, "MFA pending secret not erased"
-        assert db.get_mfa_recovery_codes(user_id) is None, "MFA recovery codes not erased"
+        assert asyncio.run(db.get_mfa_secret(user_id)) is None, "MFA secret not erased"
+        assert asyncio.run(db.get_mfa_pending_secret(user_id)) is None, "MFA pending secret not erased"
+        assert asyncio.run(db.get_mfa_recovery_codes(user_id)) is None, "MFA recovery codes not erased"
 
-        # 7. Delegations
-        assert not any(
-            d.get("assigned_to") == user_id for d in db.delegations.values()
-        ), "Delegations not erased"
+        # 7. Delegations — delete_user_data() deletes Delegation rows where
+        # assigned_to == user_id (and assigned_by == user_id).
+        assert asyncio.run(db.get_delegation("item-delegated")) is None, "Delegations not erased"
 
         # 8. Locked accounts / failed attempts
         assert asyncio.run(db.count_recent_failed_logins(user_id, 0)) == 0, "Failed login attempts not erased"
@@ -362,6 +415,11 @@ class TestErasureCascade:
 
         # 9. Cache
         assert config_cache.get(f"user:{user_id}") is None, "Cache not invalidated"
+
+        # Note: this test just deleted the "john" user row entirely via
+        # /gdpr/erase. get_token()/headers() (used by every other test in
+        # this file) transparently recreates "john" on next login — see
+        # _ensure_seed_user_exists() near the top of this file.
 
     def test_compliance_audit_survives_erasure(self):
         """Compliance audit log entries must survive user erasure and use hashed refs."""
@@ -371,7 +429,7 @@ class TestErasureCascade:
 
         # Record an audit event before erasure
         from auth.models import get_users_db
-        john = [u for u in get_users_db() if u.username == "john"][0]
+        john = [u for u in asyncio.run(get_users_db()) if u.username == "john"][0]
         user_id = john.id
 
         # Trigger a compliance event that writes to the audit log

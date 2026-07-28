@@ -26,20 +26,22 @@ def test_custom_integration_crud():
     # List integrations
     response = client.get("/integrations/custom", headers=headers)
     assert response.status_code == 200
-    assert integration_id in response.json()
+    # get_custom_integrations() now returns a list of dicts (each with an
+    # "id" key), not a {id: config} dict, so membership must be checked by id.
+    assert any(c["id"] == integration_id for c in response.json())
     
     # Update integration
     client.patch(f"/integrations/custom/{integration_id}", json={"enabled": False}, headers=headers)
-    assert db.get_custom_integrations("t-acme")[integration_id]["enabled"] == False
-    
+    assert next(c for c in asyncio.run(db.get_custom_integrations("t-acme")) if c["id"] == integration_id)["enabled"] == False
+
     # Delete integration
     client.delete(f"/integrations/custom/{integration_id}", headers=headers)
-    assert integration_id not in db.get_custom_integrations("t-acme")
+    assert not any(c["id"] == integration_id for c in asyncio.run(db.get_custom_integrations("t-acme")))
     print("Custom Integration CRUD test passed!")
 
 def test_custom_integration_sync_and_scoring():
     client = TestClient(app)
-    db.clear()
+    asyncio.run(db.clear())
     
     # Login
     response = client.post("/auth/login", data={"username": "admin", "password": "admin123"})
@@ -54,7 +56,7 @@ def test_custom_integration_sync_and_scoring():
         "mapping": {"text": "message", "external_id": "id"},
         "urgency_triggers": [{"field": "severity", "value": "critical", "boost": 0.5}]
     }
-    integration_id = db.add_custom_integration("t-acme", config)
+    integration_id = asyncio.run(db.add_custom_integration("t-acme", config))
     
     # Simulate an item fetched via this custom integration
     item_data = {
@@ -69,7 +71,7 @@ def test_custom_integration_sync_and_scoring():
         },
         "timestamp": 123456789
     }
-    db.upsert_items([item_data])
+    asyncio.run(db.upsert_items([item_data]))
     
     # Get priority feed
     response = client.get("/priorities/feed", headers=headers)
@@ -84,7 +86,7 @@ def test_custom_integration_sync_and_scoring():
 
 def test_workflow_engine():
     client = TestClient(app)
-    db.clear()
+    asyncio.run(db.clear())
     
     # Login
     response = client.post("/auth/login", data={"username": "admin", "password": "admin123"})
@@ -148,7 +150,7 @@ def test_workflow_engine():
     print(f"Archived items: {archived_items.get('t-acme', set())}")
     
     # Let's check the items in DB to see their scores
-    db_items = db.get_items("t-acme")
+    db_items = asyncio.run(db.get_items("t-acme"))
     for item in db_items:
         print(f"Item {item['id']} score: {item.get('priorityScore')}")
 
