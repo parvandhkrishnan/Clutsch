@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
-from auth.models import get_user_by_username, Token, get_users_db, get_user_by_email, User, add_user
+from auth.models import get_user_by_username, Token, get_user_by_id, get_user_by_email, User, add_user
 from auth.jwt_handler import create_access_token, create_refresh_token, decode_refresh_token
 from auth.dependencies import get_admin_user, get_current_active_user
 from database import db
@@ -39,18 +39,18 @@ async def register(request: Request, reg_req: RegisterRequest):
         raise HTTPException(status_code=400, detail="Valid email required")
     if not reg_req.password or len(reg_req.password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
-    
+
     # Check if user already exists
-    existing = get_user_by_username(reg_req.username)
+    existing = await get_user_by_username(reg_req.username)
     if existing:
         raise HTTPException(status_code=409, detail="Username already taken")
-    existing_email = get_user_by_email(reg_req.email)
+    existing_email = await get_user_by_email(reg_req.email)
     if existing_email:
         raise HTTPException(status_code=409, detail="Email already registered")
-    
+
     # Create the user
     hashed = await hash_password(reg_req.password)
-    user = add_user(
+    user = await add_user(
         username=reg_req.username,
         email=reg_req.email,
         password=reg_req.password,
@@ -60,7 +60,7 @@ async def register(request: Request, reg_req: RegisterRequest):
     )
     if not user:
         raise HTTPException(status_code=500, detail="Failed to create user")
-    
+
     access_token = create_access_token(
         data={"user_id": user.id, "tenant_id": user.tenant_id, "role": user.role}
     )
@@ -76,11 +76,11 @@ async def register(request: Request, reg_req: RegisterRequest):
 @router.post("/login")
 @limiter.limit("5/minute")
 async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
-    user = get_user_by_username(form_data.username)
-    
+    user = await get_user_by_username(form_data.username)
+
     if user:
         # Check if locked
-        lockout_expiry = db.locked_accounts.get(user.id)
+        lockout_expiry = await db.get_lockout_expiry(user.id)
         if lockout_expiry and time.time() < lockout_expiry:
             wait_minutes = int((lockout_expiry - time.time()) / 60) + 1
             raise HTTPException(
@@ -92,30 +92,26 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
         if user:
             # Record failed attempt
             now = time.time()
-            if user.id not in db.failed_login_attempts:
-                db.failed_login_attempts[user.id] = []
-            db.failed_login_attempts[user.id].append(now)
-            
-            # Filter attempts within lockout window
+            await db.record_failed_login(user.id)
+
+            # Count attempts within the lockout window
             cutoff = now - (LOCKOUT_DURATION_MINUTES * 60)
-            db.failed_login_attempts[user.id] = [t for t in db.failed_login_attempts[user.id] if t > cutoff]
-            
-            if len(db.failed_login_attempts[user.id]) >= MAX_LOGIN_ATTEMPTS:
-                db.locked_accounts[user.id] = now + (LOCKOUT_DURATION_MINUTES * 60)
-                db.add_audit_log(user.id, "account_lockout", f"Account locked for {LOCKOUT_DURATION_MINUTES} minutes")
-        
+            recent_attempts = await db.count_recent_failed_logins(user.id, cutoff)
+
+            if recent_attempts >= MAX_LOGIN_ATTEMPTS:
+                await db.lock_account(user.id, now + (LOCKOUT_DURATION_MINUTES * 60))
+                await db.add_audit_log(user.id, "account_lockout", f"Account locked for {LOCKOUT_DURATION_MINUTES} minutes")
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Success: clear failed attempts
-    if user.id in db.failed_login_attempts:
-        del db.failed_login_attempts[user.id]
-    if user.id in db.locked_accounts:
-        del db.locked_accounts[user.id]
-    
+    await db.clear_failed_logins(user.id)
+    await db.clear_lockout(user.id)
+
     # If MFA is enabled, return a partial token (MFA session) instead of the final token
     if user.mfa_enabled:
         mfa_session_token = create_access_token(
@@ -128,7 +124,7 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
             "user_id": user.id,
             "message": "MFA code required. Call /auth/mfa/login to complete authentication."
         }
-    
+
     access_token = create_access_token(
         data={"user_id": user.id, "tenant_id": user.tenant_id, "role": user.role}
     )
@@ -136,18 +132,16 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
         data={"user_id": user.id}
     )
     return {
-        "access_token": access_token, 
+        "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer"
     }
 
 @router.post("/admin/unlock/{user_id}")
 async def admin_unlock_user(request: Request, user_id: str, admin: User = Depends(get_admin_user)):
-    if user_id in db.locked_accounts:
-        del db.locked_accounts[user_id]
-    if user_id in db.failed_login_attempts:
-        del db.failed_login_attempts[user_id]
-    db.add_audit_log(admin.id, "admin_unlock_user", f"Admin unlocked user {user_id}")
+    await db.clear_lockout(user_id)
+    await db.clear_failed_logins(user_id)
+    await db.add_audit_log(admin.id, "admin_unlock_user", f"Admin unlocked user {user_id}")
     return {"status": "success", "message": f"User {user_id} unlocked"}
 
 @router.post("/refresh", response_model=Token)
@@ -159,15 +153,10 @@ async def refresh(request: Request, refresh_req: RefreshRequest):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired refresh token",
         )
-    
+
     user_id = payload.get("user_id")
-    # Find user
-    user = None
-    for u in get_users_db():
-        if u.id == user_id:
-            user = u
-            break
-    
+    user = await get_user_by_id(user_id)
+
     if not user:
          raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -181,9 +170,9 @@ async def refresh(request: Request, refresh_req: RefreshRequest):
     new_refresh_token = create_refresh_token(
         data={"user_id": user.id}
     )
-    
+
     return {
-        "access_token": access_token, 
+        "access_token": access_token,
         "refresh_token": new_refresh_token,
         "token_type": "bearer"
     }
@@ -191,14 +180,25 @@ async def refresh(request: Request, refresh_req: RefreshRequest):
 @router.post("/sso/login", response_model=Token)
 @limiter.limit("5/minute")
 async def sso_login(request: Request, sso_req: SSOLoginRequest):
-    # Simulation of SSO handshake
-    user = get_user_by_email(sso_req.email)
+    # SIMULATED SSO ONLY: this endpoint does not perform any real SAML/OIDC
+    # handshake or identity-provider signature verification against
+    # sso_req.provider — it only checks that the email belongs to an existing
+    # user. Real IdP integration is still a TODO. Gated behind an explicit
+    # opt-in env flag so a production deployment with no flag set fails
+    # closed instead of acting as an unauthenticated login bypass.
+    if os.environ.get("ENABLE_SIMULATED_SSO") != "true":
+        raise HTTPException(
+            status_code=501,
+            detail="SSO login is not configured for real identity-provider verification in this deployment"
+        )
+
+    user = await get_user_by_email(sso_req.email)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found for this SSO identity"
         )
-    
+
     print(f"Verified {sso_req.email} via {sso_req.provider}")
     access_token = create_access_token(
         data={"user_id": user.id, "tenant_id": user.tenant_id, "role": user.role}
@@ -207,7 +207,7 @@ async def sso_login(request: Request, sso_req: SSOLoginRequest):
         data={"user_id": user.id}
     )
     return {
-        "access_token": access_token, 
+        "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer"
     }

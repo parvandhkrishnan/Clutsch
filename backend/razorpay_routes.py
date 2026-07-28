@@ -61,7 +61,7 @@ async def create_subscription(
     
     # Free plan: no payment needed
     if req.plan == "Free":
-        db.update_billing_plan(current_user.tenant_id, "Free", f"free_{int(time.time())}")
+        await db.update_billing_plan(current_user.tenant_id, "Free", f"free_{int(time.time())}")
         return {
             "subscription_id": f"free_{int(time.time())}",
             "key_id": RAZORPAY_KEY_ID,
@@ -119,7 +119,7 @@ async def verify_payment(
     try:
         if RAZORPAY_KEY_ID == "rzp_test_mock_id":
             # Mock verification
-            db.update_billing_plan(current_user.tenant_id, "Pro", req.razorpay_subscription_id)
+            await db.update_billing_plan(current_user.tenant_id, "Pro", req.razorpay_subscription_id)
             return {"status": "success", "message": "Mock payment verified"}
 
         params_dict = {
@@ -134,7 +134,7 @@ async def verify_payment(
         # Update database
         # Note: In a real app, you'd fetch the subscription to find the plan
         # For now we'll assume Pro if not found, but ideally it's in metadata
-        db.update_billing_plan(current_user.tenant_id, "Pro", req.razorpay_subscription_id)
+        await db.update_billing_plan(current_user.tenant_id, "Pro", req.razorpay_subscription_id)
         
         return {"status": "success"}
     except Exception as e:
@@ -184,16 +184,16 @@ async def handle_subscription_activated(subscription):
     subscription_id = subscription.get("id")
     
     if tenant_id:
-        db.update_billing_plan(tenant_id, plan, subscription_id)
-        db.add_audit_log("system", "razorpay_subscription_activated", f"Tenant {tenant_id} upgraded to {plan}")
+        await db.update_billing_plan(tenant_id, plan, subscription_id)
+        await db.add_audit_log("system", "razorpay_subscription_activated", f"Tenant {tenant_id} upgraded to {plan}")
         logger.info(f"Razorpay Subscription activated for tenant {tenant_id}: {plan}")
 
 async def handle_subscription_deactivated(subscription):
     notes = subscription.get("notes", {})
     tenant_id = notes.get("tenant_id")
     if tenant_id:
-        db.update_billing_plan(tenant_id, "Free")
-        db.add_audit_log("system", "razorpay_subscription_deactivated", f"Tenant {tenant_id} downgraded to Free")
+        await db.update_billing_plan(tenant_id, "Free")
+        await db.add_audit_log("system", "razorpay_subscription_deactivated", f"Tenant {tenant_id} downgraded to Free")
         logger.info(f"Razorpay Subscription deactivated for tenant {tenant_id}")
 
 async def handle_mock_webhook(data):
@@ -208,7 +208,7 @@ async def get_subscription_status(current_user: User = Depends(get_current_activ
     """
     Get current subscription plan and details.
     """
-    billing_info = db.get_billing_info(current_user.tenant_id)
+    billing_info = await db.get_billing_info(current_user.tenant_id)
     if not billing_info:
         return {
             "plan": "Free",

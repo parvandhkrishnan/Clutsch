@@ -9,23 +9,23 @@ class ScoringService:
         self.analyzer = analyzer
         self.db = db
 
-    def process_items(self, tenant_id: str, items: List[Dict[str, Any]], archived_ids: set, snoozed_items: Dict[str, datetime.datetime], contact_priorities: Dict[str, Dict[str, str]] = None) -> List[Dict[str, Any]]:
+    async def process_items(self, tenant_id: str, items: List[Dict[str, Any]], archived_ids: set, snoozed_items: Dict[str, datetime.datetime], contact_priorities: Dict[str, Dict[str, str]] = None) -> List[Dict[str, Any]]:
         """
         Process a list of items: filter, analyze, score, and sort.
         """
         now = datetime.datetime.now()
         processed_items = []
-        
+
         # Fetch custom weights for the tenant
         custom_weights = None
         semantic_weights = {}
         project_priorities = {}
         client_priorities = {}
         if self.db:
-            custom_weights = self.db.get_custom_weights(tenant_id)
-            semantic_weights = self.db.get_semantic_weights(tenant_id)
-            project_priorities = self.db.get_project_priorities(tenant_id)
-            client_priorities = self.db.get_client_priorities(tenant_id)
+            custom_weights = await self.db.get_custom_weights(tenant_id)
+            semantic_weights = await self.db.get_semantic_weights(tenant_id)
+            project_priorities = await self.db.get_project_priorities(tenant_id)
+            client_priorities = await self.db.get_client_priorities(tenant_id)
 
         for item in items:
             # Filter archived and snoozed

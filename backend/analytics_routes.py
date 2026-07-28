@@ -14,16 +14,15 @@ async def get_enterprise_metrics(current_user: User = Depends(get_current_active
     Aggregate and return Enterprise KPIs for the tenant.
     """
     tenant_id = current_user.tenant_id
-    items = db.get_items(tenant_id)
-    audit_logs = db.get_audit_logs(tenant_id)
-    
+    items = await db.get_items(tenant_id)
+    audit_logs = await db.get_audit_logs(tenant_id)
+
     # 1. Priority Distribution
     priority_dist = {"urgent": 0, "high": 0, "medium": 0, "low": 0}
     # We need to score items to get their priority tier
-    from services import scoring_service, archived_items, snoozed_items
-    tenant_archived = archived_items.get(tenant_id, set())
-    tenant_snoozed = snoozed_items.get(tenant_id, {})
-    scored_items = scoring_service.process_items(tenant_id, items, tenant_archived, tenant_snoozed, {})
+    from services import scoring_service, split_archived_snoozed
+    tenant_archived, tenant_snoozed = split_archived_snoozed(items)
+    scored_items = await scoring_service.process_items(tenant_id, items, tenant_archived, tenant_snoozed, {})
     
     for item in scored_items:
         tier = item.get("priorityTier", "low")
@@ -68,11 +67,32 @@ async def get_enterprise_metrics(current_user: User = Depends(get_current_active
     
     focus_score = (resolved_critical / len(critical_items) * 100) if critical_items else 100
 
-    # 4. Activity Trends (Mocked for now)
-    trends = [
-        {"date": (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d"), "actions": 10 + i * 2}
-        for i in range(7)
-    ]
+    # 4. Activity Trends — real daily activity volume over the last 7 days,
+    # combining item creation (from Item.timestamp, an epoch float) and audit
+    # log actions (from AuditLog.timestamp, also an epoch float) so days with
+    # only new items (no actions taken yet) still show up.
+    trend_days = 7
+    today = datetime.now().date()
+    day_keys = [(today - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(trend_days)]
+    day_buckets = {day_key: 0 for day_key in day_keys}
+
+    for item in items:
+        ts = item.get("timestamp")
+        if ts is None:
+            continue
+        day_key = datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+        if day_key in day_buckets:
+            day_buckets[day_key] += 1
+
+    for log in audit_logs:
+        ts = log.get("timestamp")
+        if ts is None:
+            continue
+        day_key = datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+        if day_key in day_buckets:
+            day_buckets[day_key] += 1
+
+    trends = [{"date": day_key, "actions": day_buckets[day_key]} for day_key in day_keys]
 
     return {
         "priority_distribution": priority_dist,

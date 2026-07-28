@@ -29,49 +29,49 @@ const Settings = () => {
   const [nominee, setNominee] = useState({ name: '', email: '', relationship: '' });
   const [grievance, setGrievance] = useState({ subject: 'Data Access', description: '' });
   const [exportStatus, setExportStatus] = useState('');
-  const [consent, setConsent] = useState(false);
-  const [consentLoading, setConsentLoading] = useState(false);
+  // Granular per-purpose consent: { purpose_id: { title, description, required_for_service, enabled } }
+  const [consentPrefs, setConsentPrefs] = useState({});
+  const [consentLoadingPurpose, setConsentLoadingPurpose] = useState(null);
   const [consentStatus, setConsentStatus] = useState('');
 
   const fetchConsentStatus = useCallback(async () => {
     try {
       const data = await api.get('/dpdp/consent');
-      if (data.consent_history && data.consent_history.length > 0) {
-        const latest = data.consent_history[data.consent_history.length - 1];
-        setConsent(latest.version !== 'withdrawn');
-      }
+      setConsentPrefs(data.consent_purposes || {});
     } catch (err) {
       // Silently fail — non-critical consent fetch
     }
   }, []);
 
-  const handleConsentChange = async (e) => {
-    const newValue = e.target.checked;
-    
+  const handleConsentChange = async (purposeId, newValue) => {
     if (!newValue) {
-      const confirmed = window.confirm("Disabling explicit consent will stop all AI prioritization and data aggregation for your account. Are you sure you want to withdraw consent?");
-      if (!confirmed) {
-        e.preventDefault();
-        return;
-      }
+      const meta = consentPrefs[purposeId];
+      const confirmed = window.confirm(
+        `Disabling "${meta?.title || purposeId}" may affect related features for your account. Are you sure you want to withdraw this consent?`
+      );
+      if (!confirmed) return;
     }
 
-    setConsentLoading(true);
+    setConsentLoadingPurpose(purposeId);
     setConsentStatus('');
     try {
-      const payload = newValue 
-        ? { version: "1.2", purpose: "AI prioritization and data aggregation" }
-        : { version: "withdrawn", purpose: "withdrawn" };
-      
-      await api.post('/dpdp/consent', payload);
-      setConsent(newValue);
+      const data = await api.post('/dpdp/consent', { [purposeId]: newValue });
+      // Merge the updated values back into each purpose's metadata (the
+      // response only returns { purpose_id: bool }, not full metadata).
+      setConsentPrefs(prev => {
+        const next = { ...prev };
+        for (const [id, enabled] of Object.entries(data.current_preferences || {})) {
+          next[id] = { ...(next[id] || {}), enabled };
+        }
+        return next;
+      });
       setConsentStatus(newValue ? 'Consent granted' : 'Consent withdrawn');
       setTimeout(() => setConsentStatus(''), 3000);
     } catch (err) {
       setConsentStatus('Update failed');
       setTimeout(() => setConsentStatus(''), 3000);
     } finally {
-      setConsentLoading(false);
+      setConsentLoadingPurpose(null);
     }
   };
 
@@ -280,27 +280,29 @@ const Settings = () => {
             <div className="settings-subsection">
               <h3>DPDP Compliance (India)</h3>
               <div className="compliance-options">
-                <div className="compliance-item">
-                  <div className="compliance-info">
-                    <h4>Explicit Consent</h4>
-                    <p>Itemized consent for processing your communication data for priority analysis.</p>
+                {Object.entries(consentPrefs).map(([purposeId, meta]) => (
+                  <div className="compliance-item" key={purposeId}>
+                    <div className="compliance-info">
+                      <h4>{meta.title || purposeId}</h4>
+                      <p>{meta.description}</p>
+                    </div>
+                    <label className="switch">
+                      <input
+                        type="checkbox"
+                        checked={!!meta.enabled}
+                        onChange={(e) => handleConsentChange(purposeId, e.target.checked)}
+                        disabled={consentLoadingPurpose === purposeId || (meta.required_for_service && meta.enabled)}
+                      />
+                      <span className={`slider round ${consentLoadingPurpose === purposeId ? 'opacity-50' : ''}`}></span>
+                    </label>
+                    {consentLoadingPurpose === purposeId && <Loader2 size={16} className="spin ml-2" style={{ marginLeft: '8px', color: 'var(--primary-blue)' }} />}
                   </div>
-                  <label className="switch">
-                    <input 
-                      type="checkbox" 
-                      checked={consent} 
-                      onChange={handleConsentChange} 
-                      disabled={consentLoading}
-                    />
-                    <span className={`slider round ${consentLoading ? 'opacity-50' : ''}`}></span>
-                  </label>
-                  {consentLoading && <Loader2 size={16} className="spin ml-2" style={{ marginLeft: '8px', color: 'var(--primary-blue)' }} />}
-                  {consentStatus && (
-                    <span className={`status-msg ${consentStatus.includes('failed') ? 'error' : 'success'}`} style={{ marginLeft: '12px', fontSize: '0.85rem' }}>
-                      {consentStatus}
-                    </span>
-                  )}
-                </div>
+                ))}
+                {consentStatus && (
+                  <span className={`status-msg ${consentStatus.includes('failed') ? 'error' : 'success'}`} style={{ fontSize: '0.85rem' }}>
+                    {consentStatus}
+                  </span>
+                )}
 
                 <div className="compliance-item">
                   <div className="compliance-info">

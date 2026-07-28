@@ -98,13 +98,13 @@ function App() {
           } />
 
           <Route path="/dashboard/admin" element={
-            <ProtectedRoute>
+            <ProtectedRoute adminOnly>
               <MainLayout><Admin /></MainLayout>
             </ProtectedRoute>
           } />
 
           <Route path="/dashboard/admin/:tab" element={
-            <ProtectedRoute>
+            <ProtectedRoute adminOnly>
               <MainLayout><Admin /></MainLayout>
             </ProtectedRoute>
           } />

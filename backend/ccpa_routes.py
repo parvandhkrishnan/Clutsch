@@ -158,7 +158,7 @@ async def set_do_not_sell(
         current_user.id, "CCPA", "DO_NOT_SELL", outcome,
         details=f"Set do_not_sell_or_share={value}"
     )
-    db.add_audit_log(
+    await db.add_audit_log(
         current_user.id, "CCPA_DO_NOT_SELL",
         f"CCPA Do Not Sell/Share set to {value}"
     )
@@ -187,7 +187,7 @@ async def ccpa_access(
     CCPA Right to Know: Categories and specific pieces of personal info collected.
     """
     from gdpr_routes import _collect_all_user_data
-    data = _collect_all_user_data(current_user.id, current_user.tenant_id)
+    data = await _collect_all_user_data(current_user.id, current_user.tenant_id)
 
     # CCPA requires categories of sources and business purpose
     categories = {
@@ -209,7 +209,7 @@ async def ccpa_access(
     }
 
     log_compliance_event(current_user.id, "CCPA", "DATA_ACCESS", "fulfilled")
-    db.add_audit_log(current_user.id, "CCPA_ACCESS", "User accessed data via CCPA Right to Know")
+    await db.add_audit_log(current_user.id, "CCPA_ACCESS", "User accessed data via CCPA Right to Know")
 
     return {
         "regulation": "CCPA/CPRA",

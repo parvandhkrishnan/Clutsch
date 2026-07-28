@@ -24,7 +24,7 @@ from adapters.jira import JiraAdapter
 from adapters.custom import CustomAdapter
 from realtime_routes import notify_new_items
 from workflow_service import workflow_service
-from services import scoring_service, archived_items, snoozed_items
+from services import scoring_service
 
 logger = logging.getLogger("priorityflow")
 limiter = Limiter(key_func=get_remote_address)
@@ -57,7 +57,7 @@ class IntegrationSettings(BaseModel):
 @limiter.limit("20/minute")
 async def list_integrations(request: Request, current_user: User = Depends(get_current_active_user)):
     tenant_id = current_user.tenant_id
-    tenant_integrations = db.connected_integrations.get(tenant_id, {})
+    tenant_integrations = await db.get_connected_integrations(tenant_id)
     
     connected_list = []
     for provider, config in tenant_integrations.items():
@@ -101,10 +101,10 @@ async def connect_integration(
         }
     }
     
-    db.connect_integration(tenant_id, provider, config)
-    
+    await db.connect_integration(tenant_id, provider, config)
+
     # Audit log
-    db.add_audit_log(current_user.id, "connect_integration", f"Connected {provider} via token")
+    await db.add_audit_log(current_user.id, "connect_integration", f"Connected {provider} via token")
     return {"message": f"Connected to {provider}", "status": "success"}
 
 @router.post("/{provider}/exchange")
@@ -136,8 +136,8 @@ async def exchange_code(
             }
         }
         
-        db.connect_integration(tenant_id, provider, config)
-        db.add_audit_log(current_user.id, "oauth_exchange", f"Exchanged code for {provider}")
+        await db.connect_integration(tenant_id, provider, config)
+        await db.add_audit_log(current_user.id, "oauth_exchange", f"Exchanged code for {provider}")
         
         return {"message": "Exchange successful", "provider": provider}
     except Exception as e:
@@ -198,11 +198,11 @@ async def update_integration_settings(
 ):
     tenant_id = current_user.tenant_id
     settings_dict = {k: v for k, v in settings.dict().items() if v is not None}
-    
-    if not db.update_integration_settings(tenant_id, provider, settings_dict):
+
+    if not await db.update_integration_settings(tenant_id, provider, settings_dict):
         raise HTTPException(status_code=404, detail="Integration not found or not connected")
-    
-    db.add_audit_log(current_user.id, "update_integration_settings", f"Updated settings for {provider}: {settings_dict}")
+
+    await db.add_audit_log(current_user.id, "update_integration_settings", f"Updated settings for {provider}: {settings_dict}")
     return {"message": f"Updated settings for {provider}", "status": "success"}
 
 @router.delete("/{provider}")
@@ -213,11 +213,11 @@ async def disconnect_integration(
     current_user: User = Depends(get_current_active_user)
 ):
     tenant_id = current_user.tenant_id
-    
-    if not db.disconnect_integration(tenant_id, provider):
+
+    if not await db.disconnect_integration(tenant_id, provider):
         raise HTTPException(status_code=404, detail="Integration not found or not connected")
-    
-    db.add_audit_log(current_user.id, "disconnect_integration", f"Disconnected {provider}")
+
+    await db.add_audit_log(current_user.id, "disconnect_integration", f"Disconnected {provider}")
     return {"message": f"Disconnected {provider}", "status": "success"}
 
 @router.post("/sync")
@@ -228,8 +228,8 @@ async def trigger_sync(
 ):
     tenant_id = current_user.tenant_id
     task_id = background_worker.enqueue(sync_all_integrations_sync, tenant_id)
-    
-    db.add_audit_log(current_user.id, "trigger_sync", "Triggered manual sync")
+
+    await db.add_audit_log(current_user.id, "trigger_sync", "Triggered manual sync")
     return {"message": "Sync triggered", "status": "processing", "task_id": task_id}
 
 # Helper Functions
@@ -257,7 +257,7 @@ async def refresh_provider_token(provider: str, refresh_token: str) -> Dict[str,
     }
 
 async def sync_all_integrations(tenant_id: str):
-    tenant_integrations = db.connected_integrations.get(tenant_id, {})
+    tenant_integrations = await db.get_connected_integrations(tenant_id)
     all_items = []
     
     for provider, config in tenant_integrations.items():
@@ -286,7 +286,7 @@ async def sync_all_integrations(tenant_id: str):
                         token = new_tokens["access_token"]
                         
                         # Update DB with new token
-                        db.save_integration_tokens(tenant_id, provider, {
+                        await db.save_integration_tokens(tenant_id, provider, {
                             "access_token": encrypt_secret(token),
                             "token_expiry": (datetime.datetime.now() + datetime.timedelta(seconds=new_tokens["expires_in"])).isoformat()
                         })
@@ -302,12 +302,12 @@ async def sync_all_integrations(tenant_id: str):
                 logger.error(f"SYNC_ERROR: {provider} for {tenant_id}: {e}")
     
     # --- Sync Custom Integrations ---
-    custom_integrations = db.get_custom_integrations(tenant_id)
+    custom_integrations = await db.get_custom_integrations(tenant_id)  # list of dicts, each with an "id"
     all_custom_items = []
-    for integration_id, config in custom_integrations.items():
+    for config in custom_integrations:
         if not config.get("enabled", True):
             continue
-        
+
         try:
             adapter = CustomAdapter(config)
             items = await adapter.fetch_items()
@@ -322,12 +322,10 @@ async def sync_all_integrations(tenant_id: str):
     total_items = all_items + all_custom_items
     if total_items:
         # 1. Fetch dependencies for scoring
-        contact_priorities = db.get_contact_priorities(tenant_id)
-        tenant_archived = archived_items.get(tenant_id, set())
-        tenant_snoozed = snoozed_items.get(tenant_id, {})
+        contact_priorities = await db.get_contact_priorities(tenant_id)
 
         # 2. Score items
-        scored_items = scoring_service.process_items(
+        scored_items = await scoring_service.process_items(
             tenant_id,
             total_items,
             set(), # Don't filter out archived yet, we want to run workflows on them or they are new anyway
@@ -339,7 +337,7 @@ async def sync_all_integrations(tenant_id: str):
         await workflow_service.run_workflows_for_items(tenant_id, scored_items)
 
         # 4. Save to DB
-        db.upsert_items(scored_items)
+        await db.upsert_items(scored_items)
         logger.info(f"SYNC_COMPLETE: {len(scored_items)} items prioritized and workflow-processed for tenant {tenant_id}")
 
     # Notify via WebSocket if any new items were found

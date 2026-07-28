@@ -1,20 +1,16 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Users, 
-  Settings, 
-  Shield, 
-  History, 
-  UserPlus, 
-  Search, 
-  MoreVertical,
-  Check,
+import {
+  Users,
+  Settings,
+  History,
+  UserPlus,
+  Search,
   X,
   Plus,
   Sliders,
   Lock,
   Globe,
-  Database,
   Cpu,
   Zap,
   Target,
@@ -30,15 +26,26 @@ import api from '../utils/api';
 import { useEffect } from 'react';
 
 const UserDirectory = () => {
-  const [users, setUsers] = useState([
-    { id: 1, name: 'Sarah Chen', email: 'sarah@acme.co', role: 'Admin', status: 'Active' },
-    { id: 2, name: 'James Wilson', email: 'james@acme.co', role: 'Manager', status: 'Active' },
-    { id: 3, name: 'Alex Rivera', email: 'alex@acme.co', role: 'Member', status: 'Active' },
-    { id: 4, name: 'Maria Garcia', email: 'maria@acme.co', role: 'Member', status: 'Pending' },
-    { id: 5, name: 'Tom Baker', email: 'tom@acme.co', role: 'Member', status: 'Inactive' },
-  ]);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const [showInviteModal, setShowInviteModal] = useState(false);
+  useEffect(() => {
+    const fetchMembers = async () => {
+      try {
+        const data = await api.get('/team/members');
+        setUsers(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Failed to fetch team members:", err);
+        setError(err.message || "Failed to load team members.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMembers();
+  }, []);
+
+  if (loading) return <div className="loading-state"><p>Loading team members...</p></div>;
 
   return (
     <div className="admin-content animate-in">
@@ -47,11 +54,17 @@ const UserDirectory = () => {
           <h2>User Directory</h2>
           <p>Manage organization members and their access levels.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowInviteModal(true)}>
+        <button
+          className="btn btn-primary"
+          disabled
+          title="Invitations aren't available yet — there is no backend endpoint for sending invites."
+        >
           <UserPlus size={18} />
           <span>Invite User</span>
         </button>
       </div>
+
+      {error && <div className="error-state">{error}</div>}
 
       <div className="card glass-effect directory-container">
         <div className="table-controls">
@@ -63,8 +76,7 @@ const UserDirectory = () => {
             <select className="glass-select">
               <option>All Roles</option>
               <option>Admin</option>
-              <option>Manager</option>
-              <option>Member</option>
+              <option>User</option>
             </select>
           </div>
         </div>
@@ -75,8 +87,8 @@ const UserDirectory = () => {
               <th>Name</th>
               <th>Email</th>
               <th>Role</th>
-              <th>Status</th>
-              <th></th>
+              <th>Availability</th>
+              <th>Workload</th>
             </tr>
           </thead>
           <tbody>
@@ -84,86 +96,146 @@ const UserDirectory = () => {
               <tr key={user.id}>
                 <td>
                   <div className="user-info-cell">
-                    <div className="user-avatar-sm">{user.name.split(' ').map(n => n[0]).join('')}</div>
-                    <span className="user-name-bold">{user.name}</span>
+                    <div className="user-avatar-sm">{user.avatar || user.username?.slice(0, 2).toUpperCase()}</div>
+                    <span className="user-name-bold">{user.username}</span>
                   </div>
                 </td>
                 <td>{user.email}</td>
                 <td>
-                  <span className={`role-badge ${user.role.toLowerCase()}`}>{user.role}</span>
+                  <span className={`role-badge ${(user.role || '').toLowerCase()}`}>{user.role}</span>
                 </td>
                 <td>
-                  <span className={`status-pill ${user.status.toLowerCase()}`}>{user.status}</span>
+                  <span className={`status-pill ${(user.availability || '').toLowerCase()}`}>{user.availability}</span>
                 </td>
-                <td className="text-right">
-                  <button className="icon-btn"><MoreVertical size={18} /></button>
-                </td>
+                <td>{user.workload}</td>
               </tr>
             ))}
+            {users.length === 0 && !error && (
+              <tr>
+                <td colSpan="5" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  No team members found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
-
-      {showInviteModal && (
-        <div className="modal-overlay">
-          <div className="modal-card animate-in">
-            <div className="modal-header">
-              <h2>Invite New Member</h2>
-              <button className="close-btn" onClick={() => setShowInviteModal(false)}><X size={20} /></button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Email Address</label>
-                <input type="email" placeholder="colleague@acme.co" className="glass-input" />
-              </div>
-              <div className="form-group">
-                <label>Full Name (Optional)</label>
-                <input type="text" placeholder="John Doe" className="glass-input" />
-              </div>
-              <div className="form-group">
-                <label>Organization Role</label>
-                <select className="glass-select full-width">
-                  <option>Member</option>
-                  <option>Manager</option>
-                  <option>Admin</option>
-                </select>
-              </div>
-              <div className="security-notice">
-                <Shield size={16} />
-                <span>Invited users will receive an email to set up their account and connect their data sources.</span>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowInviteModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={() => setShowInviteModal(false)}>Send Invitation</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
 const PrioritizationRules = () => {
-  const [rules, setRules] = useState([
-    { id: 1, name: 'Project Alpha', type: 'Keyword', weight: 25, active: true },
-    { id: 2, name: 'CEO/Executive', type: 'Stakeholder', weight: 40, active: true },
-    { id: 3, name: 'Newsletter', type: 'Domain', weight: -15, active: true },
-    { id: 4, name: 'Urgent Support', type: 'Subject', weight: 30, active: false },
-  ]);
+  const [contacts, setContacts] = useState({});
+  const [projects, setProjects] = useState({});
+  const [clients, setClients] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const [showAddRuleModal, setShowAddRuleModal] = useState(false);
+  const [newRule, setNewRule] = useState({ category: 'project', platform: 'gmail', handle: '', entityId: '', priority: 'medium' });
 
-  const updateWeight = (id, newWeight) => {
-    setRules(rules.map(r => r.id === id ? { ...r, weight: parseInt(newWeight) } : r));
+  useEffect(() => {
+    const fetchRules = async () => {
+      try {
+        const [c, p, cl] = await Promise.all([
+          api.get('/preferences/contacts'),
+          api.get('/preferences/projects'),
+          api.get('/preferences/clients'),
+        ]);
+        setContacts(c || {});
+        setProjects(p || {});
+        setClients(cl || {});
+      } catch (err) {
+        console.error("Failed to fetch prioritization rules:", err);
+        setError(err.message || "Failed to load prioritization rules.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRules();
+  }, []);
+
+  // Flatten the three priority sources into a single list of "rules" for display.
+  const rules = [];
+  Object.entries(contacts).forEach(([platform, handles]) => {
+    Object.entries(handles || {}).forEach(([handle, priority]) => {
+      rules.push({ category: 'contact', key: `contact:${platform}:${handle}`, label: handle, sub: platform, priority });
+    });
+  });
+  Object.entries(projects).forEach(([entityId, priority]) => {
+    rules.push({ category: 'project', key: `project:${entityId}`, label: entityId, sub: 'Project', priority });
+  });
+  Object.entries(clients).forEach(([entityId, priority]) => {
+    rules.push({ category: 'client', key: `client:${entityId}`, label: entityId, sub: 'Client', priority });
+  });
+
+  const savePriority = async (rule, newPriority) => {
+    try {
+      if (rule.category === 'contact') {
+        await api.post('/preferences/contacts', { platform: rule.sub, handle: rule.label, priority: newPriority });
+        setContacts(prev => ({ ...prev, [rule.sub]: { ...(prev[rule.sub] || {}), [rule.label]: newPriority } }));
+      } else if (rule.category === 'project') {
+        await api.post('/preferences/projects', { entity_id: rule.label, priority: newPriority });
+        setProjects(prev => ({ ...prev, [rule.label]: newPriority }));
+      } else if (rule.category === 'client') {
+        await api.post('/preferences/clients', { entity_id: rule.label, priority: newPriority });
+        setClients(prev => ({ ...prev, [rule.label]: newPriority }));
+      }
+    } catch (err) {
+      console.error("Failed to update rule priority:", err);
+    }
   };
+
+  const deleteContactRule = async (platform, handle) => {
+    try {
+      await api.delete(`/preferences/contacts/${encodeURIComponent(platform)}/${encodeURIComponent(handle)}`);
+      setContacts(prev => {
+        const next = { ...prev };
+        if (next[platform]) {
+          const handles = { ...next[platform] };
+          delete handles[handle];
+          next[platform] = handles;
+        }
+        return next;
+      });
+    } catch (err) {
+      console.error("Failed to delete rule:", err);
+    }
+  };
+
+  const handleAddRule = async () => {
+    try {
+      if (newRule.category === 'contact') {
+        const handle = newRule.handle.trim();
+        if (!handle) return;
+        await api.post('/preferences/contacts', { platform: newRule.platform, handle, priority: newRule.priority });
+        setContacts(prev => ({ ...prev, [newRule.platform]: { ...(prev[newRule.platform] || {}), [handle]: newRule.priority } }));
+      } else {
+        const entityId = newRule.entityId.trim();
+        if (!entityId) return;
+        if (newRule.category === 'project') {
+          await api.post('/preferences/projects', { entity_id: entityId, priority: newRule.priority });
+          setProjects(prev => ({ ...prev, [entityId]: newRule.priority }));
+        } else {
+          await api.post('/preferences/clients', { entity_id: entityId, priority: newRule.priority });
+          setClients(prev => ({ ...prev, [entityId]: newRule.priority }));
+        }
+      }
+      setShowAddRuleModal(false);
+      setNewRule({ category: 'project', platform: 'gmail', handle: '', entityId: '', priority: 'medium' });
+    } catch (err) {
+      console.error("Failed to create rule:", err);
+    }
+  };
+
+  if (loading) return <div className="loading-state"><p>Loading Prioritization Rules...</p></div>;
 
   return (
     <div className="admin-content animate-in">
       <div className="section-header">
         <div>
           <h2>Prioritization Rules</h2>
-          <p>Define global weights to tune the AI prioritization engine for your team.</p>
+          <p>Set fixed priority levels for specific contacts, projects, and clients.</p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowAddRuleModal(true)}>
           <Plus size={18} />
@@ -173,81 +245,46 @@ const PrioritizationRules = () => {
 
       <div className="rules-grid">
         <div className="card glass-effect weighting-card">
-          <h3>Keyword & Domain Weighting</h3>
-          <p className="card-desc">Keywords, domains, and stakeholders that influence the Priority Score.</p>
+          <h3>Contact, Project & Client Priorities</h3>
+          <p className="card-desc">Named entities that receive a fixed priority level in the scoring engine.</p>
+          {error && <div className="error-state">{error}</div>}
           <div className="rules-list">
             {rules.map(rule => (
-              <div key={rule.id} className="rule-item">
+              <div key={rule.key} className="rule-item">
                 <div className="rule-main">
-                  <span className="rule-name">{rule.name}</span>
-                  <span className="rule-type">{rule.type}</span>
+                  <span className="rule-name">{rule.label}</span>
+                  <span className="rule-type">{rule.category === 'contact' ? rule.sub : rule.sub}</span>
                 </div>
                 <div className="rule-interact">
-                  <div className="weight-control">
-                    <span className={`weight-badge ${rule.weight > 0 ? 'positive' : 'negative'}`}>
-                      {rule.weight > 0 ? `+${rule.weight}` : rule.weight}
-                    </span>
-                    <input 
-                      type="range" 
-                      min="-50" 
-                      max="50" 
-                      value={rule.weight} 
-                      onChange={(e) => updateWeight(rule.id, e.target.value)}
-                      className="weight-slider"
-                    />
-                  </div>
-                  <label className="switch">
-                    <input type="checkbox" checked={rule.active} onChange={() => {}} />
-                    <span className="slider round"></span>
-                  </label>
+                  <select
+                    className="glass-select"
+                    value={rule.priority}
+                    onChange={(e) => savePriority(rule, e.target.value)}
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                  {rule.category === 'contact' && (
+                    <button className="icon-btn text-red" title="Remove" onClick={() => deleteContactRule(rule.sub, rule.label)}>
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
+            {rules.length === 0 && !error && (
+              <p style={{ color: 'var(--text-muted)', padding: '20px 0' }}>No prioritization rules yet. Add one to get started.</p>
+            )}
           </div>
         </div>
 
         <div className="card glass-effect global-settings">
           <h3>Global Engine Settings</h3>
-          <div className="engine-setting">
-            <div className="setting-info">
-              <label>Aggressive Prioritization</label>
-              <p>Higher sensitivity to urgency signals.</p>
-            </div>
-            <label className="switch">
-              <input type="checkbox" defaultChecked />
-              <span className="slider round"></span>
-            </label>
-          </div>
-          <div className="engine-setting">
-            <div className="setting-info">
-              <label>Domain Whitelisting</label>
-              <p>Only prioritize communications from approved domains.</p>
-            </div>
-            <label className="switch">
-              <input type="checkbox" />
-              <span className="slider round"></span>
-            </label>
-          </div>
-          <div className="engine-setting">
-            <div className="setting-info">
-              <label>Strict Focus Mode</label>
-              <p>Auto-hide notifications for items with score &lt; 80.</p>
-            </div>
-            <label className="switch">
-              <input type="checkbox" />
-              <span className="slider round"></span>
-            </label>
-          </div>
-          <div className="engine-setting">
-            <div className="setting-info">
-              <label>AI Reasoning Transparency</label>
-              <p>Expose internal AI logic in user tooltips.</p>
-            </div>
-            <label className="switch">
-              <input type="checkbox" defaultChecked />
-              <span className="slider round"></span>
-            </label>
-          </div>
+          <p className="card-desc">
+            Organization-wide mode toggles (aggressive prioritization, domain whitelisting, strict focus mode,
+            AI reasoning transparency) are not yet implemented on the backend — coming soon.
+          </p>
         </div>
       </div>
 
@@ -260,33 +297,71 @@ const PrioritizationRules = () => {
             </div>
             <div className="modal-body">
               <div className="form-group">
-                <label>Rule Target (Keyword, Email, or Domain)</label>
-                <input type="text" placeholder="e.g. @stripe.com or 'Critical'" className="glass-input" />
-              </div>
-              <div className="form-group">
-                <label>Rule Type</label>
-                <select className="glass-select full-width">
-                  <option>Keyword</option>
-                  <option>Domain</option>
-                  <option>Stakeholder</option>
-                  <option>Subject line</option>
+                <label>Rule Category</label>
+                <select
+                  className="glass-select full-width"
+                  value={newRule.category}
+                  onChange={(e) => setNewRule({ ...newRule, category: e.target.value })}
+                >
+                  <option value="project">Project</option>
+                  <option value="client">Client</option>
+                  <option value="contact">Contact / Stakeholder</option>
                 </select>
               </div>
-              <div className="form-group">
-                <label>Priority Weighting</label>
-                <div className="weight-input-container">
-                  <input type="range" min="-100" max="100" defaultValue="20" className="weight-slider large" />
-                  <div className="weight-labels">
-                    <span>-100 (Ignore)</span>
-                    <span>0 (Neutral)</span>
-                    <span>+100 (Immediate)</span>
+
+              {newRule.category === 'contact' ? (
+                <>
+                  <div className="form-group">
+                    <label>Platform</label>
+                    <select
+                      className="glass-select full-width"
+                      value={newRule.platform}
+                      onChange={(e) => setNewRule({ ...newRule, platform: e.target.value })}
+                    >
+                      <option value="gmail">Gmail</option>
+                      <option value="slack">Slack</option>
+                      <option value="whatsapp">WhatsApp</option>
+                      <option value="outlook">Outlook</option>
+                      <option value="teams">Teams</option>
+                      <option value="jira">Jira</option>
+                    </select>
                   </div>
+                  <div className="form-group">
+                    <label>Contact Handle (email or username)</label>
+                    <input
+                      type="text" placeholder="e.g. boss@acme.com" className="glass-input"
+                      value={newRule.handle}
+                      onChange={(e) => setNewRule({ ...newRule, handle: e.target.value })}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="form-group">
+                  <label>{newRule.category === 'project' ? 'Project Name / ID' : 'Client Name / ID'}</label>
+                  <input
+                    type="text" placeholder="e.g. Project Alpha" className="glass-input"
+                    value={newRule.entityId}
+                    onChange={(e) => setNewRule({ ...newRule, entityId: e.target.value })}
+                  />
                 </div>
+              )}
+
+              <div className="form-group">
+                <label>Priority Level</label>
+                <select
+                  className="glass-select full-width"
+                  value={newRule.priority}
+                  onChange={(e) => setNewRule({ ...newRule, priority: e.target.value })}
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
               </div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setShowAddRuleModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={() => setShowAddRuleModal(false)}>Create Rule</button>
+              <button className="btn btn-primary" onClick={handleAddRule}>Create Rule</button>
             </div>
           </div>
         </div>
@@ -300,80 +375,20 @@ const SSOConfig = () => {
     <div className="admin-content animate-in">
       <div className="section-header">
         <div>
-          <h2>SSO & SAML Configuration</h2>
+          <h2>SSO / SAML Configuration</h2>
           <p>Secure organization-wide access with Enterprise identity providers.</p>
         </div>
       </div>
 
       <div className="card glass-effect sso-container">
-        <div className="sso-status-banner active">
-          <Globe size={24} />
-          <div>
-            <h4>Identity Federation Active</h4>
-            <p>Your organization is currently authenticating via Okta SAML 2.0.</p>
-          </div>
-          <button className="btn-sm btn-secondary">Test Connection</button>
-        </div>
-
-        <div className="sso-grid">
-          <div className="sso-form">
-            <div className="form-group">
-              <label><Lock size={16} /> Identity Provider Entity ID</label>
-              <div className="input-with-copy">
-                <input type="text" value="https://okta.com/exk1234567890" readOnly className="glass-input" />
-              </div>
-            </div>
-            <div className="form-group">
-              <label><Database size={16} /> SSO URL (ACS)</label>
-              <div className="input-with-copy">
-                <input type="text" value="https://api.clutsch.com/auth/sso/saml/acs" readOnly className="glass-input" />
-              </div>
-            </div>
-            <div className="cert-section">
-              <label>X.509 Public Certificate</label>
-              <div className="cert-display">
-                <code>-----BEGIN CERTIFICATE-----<br/>MIIDBTCCAe2gAwIBAgIQY7S9S...<br/>-----END CERTIFICATE-----</code>
-                <button className="cert-copy-btn">Copy</button>
-              </div>
-            </div>
-          </div>
-
-          <div className="sso-sidebar-settings">
-            <div className="card glass-effect inner-card">
-              <h4>Security Enforcement</h4>
-              <div className="setting-row">
-                <span>Enforce SSO for all members</span>
-                <label className="switch">
-                  <input type="checkbox" defaultChecked />
-                  <span className="slider round"></span>
-                </label>
-              </div>
-              <div className="setting-row">
-                <span>Auto-provision new users (JIT)</span>
-                <label className="switch">
-                  <input type="checkbox" />
-                  <span className="slider round"></span>
-                </label>
-              </div>
-              <div className="setting-row">
-                <span>Allow password fallback (Admins)</span>
-                <label className="switch">
-                  <input type="checkbox" defaultChecked />
-                  <span className="slider round"></span>
-                </label>
-              </div>
-            </div>
-            
-            <div className="sso-help-box">
-              <h5>Need help?</h5>
-              <p>Check our <a href="/dashboard/help">SSO setup guide</a> for Okta, Azure AD, and Google Workspace.</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="sso-footer">
-          <button className="btn btn-secondary">Reset Configuration</button>
-          <button className="btn btn-primary">Save Changes</button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '60px 24px', gap: '16px', color: 'var(--text-muted)' }}>
+          <Lock size={40} />
+          <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>Not Yet Implemented</h3>
+          <p style={{ maxWidth: '480px' }}>
+            SSO / SAML configuration isn't wired up on the backend yet — there is no way to save,
+            test, or enforce an identity provider from Clutsch today. This tab is a placeholder for
+            a planned feature and does not reflect any real configuration.
+          </p>
         </div>
       </div>
     </div>
@@ -381,73 +396,100 @@ const SSOConfig = () => {
 };
 
 const AuditLogs = () => {
-  const [logs] = useState([
-    { id: 1, action: 'User Invited', actor: 'Sarah Chen', target: 'Maria Garcia', date: '2024-07-02 10:15:22', ip: '192.168.1.45' },
-    { id: 2, action: 'SSO Updated', actor: 'Sarah Chen', target: 'Global Config', date: '2024-07-01 15:30:10', ip: '192.168.1.45' },
-    { id: 3, action: 'Rule Created', actor: 'James Wilson', target: 'Project Alpha', date: '2024-07-01 09:44:05', ip: '10.0.4.12' },
-    { id: 4, action: 'Role Changed', actor: 'Sarah Chen', target: 'Alex Rivera', date: '2024-06-30 18:22:12', ip: '192.168.1.45' },
-    { id: 5, action: 'Org Integration', actor: 'James Wilson', target: 'Slack Enterprise', date: '2024-06-30 11:05:45', ip: '10.0.4.12' },
-  ]);
+  const [entries, setEntries] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchAudit = async () => {
+      try {
+        const data = await api.get('/dpdp/admin/audit');
+        setEntries(data?.audit_entries || []);
+        setStats(data?.stats || null);
+      } catch (err) {
+        console.error("Failed to fetch audit log:", err);
+        if (err.status === 403) {
+          setError("Admin access is required to view the compliance audit log.");
+        } else {
+          setError(err.message || "Failed to load audit log.");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAudit();
+  }, []);
+
+  if (loading) return <div className="loading-state"><p>Loading Audit Logs...</p></div>;
 
   return (
     <div className="admin-content animate-in">
       <div className="section-header">
         <div>
           <h2>Audit Logs</h2>
-          <p>Traceability and history of all administrative actions within the organization.</p>
+          <p>DPDP compliance audit trail — consent changes, grievances, and data-rights requests.</p>
         </div>
-        <button className="btn btn-secondary">
+        <button
+          className="btn btn-secondary"
+          disabled
+          title="Export isn't available yet — there is no export endpoint on the backend."
+        >
           <History size={18} />
           <span>Export Logs</span>
         </button>
       </div>
 
-      <div className="card glass-effect directory-container">
-        <div className="table-controls">
-          <div className="search-bar">
-            <Search size={18} />
-            <input type="text" placeholder="Filter logs by action, actor or target..." />
-          </div>
-          <div className="filter-group">
-            <button className="btn-sm btn-secondary">Last 7 Days</button>
-          </div>
-        </div>
+      {error && <div className="error-state">{error}</div>}
 
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Timestamp</th>
-              <th>Action</th>
-              <th>Actor</th>
-              <th>Target</th>
-              <th>IP Address</th>
-            </tr>
-          </thead>
-          <tbody>
-            {logs.map(log => (
-              <tr key={log.id}>
-                <td className="log-timestamp">{log.date}</td>
-                <td className="log-action-bold">{log.action}</td>
-                <td>{log.actor}</td>
-                <td className="log-target">{log.target}</td>
-                <td className="log-ip">{log.ip}</td>
+      {!error && (
+        <div className="card glass-effect directory-container">
+          {stats && (
+            <div className="table-controls">
+              <span style={{ color: 'var(--text-muted)' }}>{stats.total_entries} total entries</span>
+            </div>
+          )}
+
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Regulation</th>
+                <th>Request Type</th>
+                <th>Outcome</th>
+                <th>User Ref</th>
+                <th>Details</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {entries.map((log, idx) => (
+                <tr key={idx}>
+                  <td className="log-timestamp">{log.iso_timestamp}</td>
+                  <td>{log.regulation}</td>
+                  <td className="log-action-bold">{log.request_type}</td>
+                  <td>
+                    <span className={`status-pill ${(log.outcome || '').toLowerCase()}`}>{log.outcome}</span>
+                  </td>
+                  <td className="log-ip">{log.user_ref}</td>
+                  <td className="log-target">{log.details || '-'}</td>
+                </tr>
+              ))}
+              {entries.length === 0 && (
+                <tr>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                    No audit entries recorded yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };
 
 const OrgIntegrations = () => {
-  const [integrations] = useState([
-    { id: 1, name: 'Slack Enterprise', type: 'Communication', status: 'Connected', scope: 'All Channels' },
-    { id: 2, name: 'Google Workspace', type: 'Email/Auth', status: 'Connected', scope: 'Organization' },
-    { id: 3, name: 'Jira Cloud', type: 'Productivity', status: 'Disconnected', scope: 'Engineering' },
-    { id: 4, name: 'Zoom', type: 'Video', status: 'Connected', scope: 'All Members' },
-  ]);
-
   return (
     <div className="admin-content animate-in">
       <div className="section-header">
@@ -455,44 +497,18 @@ const OrgIntegrations = () => {
           <h2>Organization Integrations</h2>
           <p>Manage third-party connections at the organization level.</p>
         </div>
-        <button className="btn btn-primary">
-          <Plus size={18} />
-          <span>Add Org Integration</span>
-        </button>
       </div>
 
       <div className="integrations-list-container admin-integrations card glass-effect">
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Integration</th>
-              <th>Type</th>
-              <th>Scope</th>
-              <th>Status</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {integrations.map(integration => (
-              <tr key={integration.id}>
-                <td>
-                  <div className="integration-name-cell">
-                    <Globe size={18} className="text-primary" />
-                    <span className="user-name-bold">{integration.name}</span>
-                  </div>
-                </td>
-                <td>{integration.type}</td>
-                <td>{integration.scope}</td>
-                <td>
-                  <span className={`status-pill ${integration.status.toLowerCase()}`}>{integration.status}</span>
-                </td>
-                <td className="text-right">
-                  <button className="btn-sm btn-secondary">Configure</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '60px 24px', gap: '16px', color: 'var(--text-muted)' }}>
+          <Globe size={40} />
+          <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>Not Yet Implemented</h3>
+          <p style={{ maxWidth: '520px' }}>
+            There is no organization-level integration management backend yet. Members can connect
+            their own accounts (Gmail, Slack, WhatsApp, Outlook, Teams, Jira) from the Integrations
+            page, but a centralized, admin-managed view of org-wide connections isn't available today.
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -129,7 +129,7 @@ async def record_consent(
             )
 
     # Get existing preferences
-    current_prefs = db.get_consent_preferences(current_user.id)
+    current_prefs = await db.get_consent_preferences(current_user.id)
 
     # Apply updates — only the keys sent in the request
     changed = []
@@ -140,7 +140,7 @@ async def record_consent(
         current_prefs[purpose] = value
 
     # Persist
-    db.set_consent_preferences(current_user.id, current_prefs)
+    await db.set_consent_preferences(current_user.id, current_prefs)
 
     # Log each changed purpose individually
     for purpose in changed:
@@ -149,7 +149,7 @@ async def record_consent(
             details=f"Purpose '{purpose}' set to {current_prefs[purpose]}"
         )
 
-    db.add_audit_log(
+    await db.add_audit_log(
         current_user.id, "RECORD_CONSENT",
         f"Updated {len(changed)} consent purpose(s): {changed}"
     )
@@ -177,7 +177,7 @@ async def get_consent_status(
     Get the current granular consent preferences for the authenticated user.
     Returns all defined purposes with their current value and metadata.
     """
-    prefs = db.get_consent_preferences(current_user.id)
+    prefs = await db.get_consent_preferences(current_user.id)
 
     result = {}
     for purpose_id, meta in CONSENT_PURPOSES.items():
@@ -213,10 +213,10 @@ async def nominate_person(
         raise HTTPException(status_code=400, detail=f"Required fields: {required}")
 
     clean_nominee = {k: nominee[k] for k in required}
-    db.set_nominee(current_user.id, clean_nominee)
+    await db.set_nominee(current_user.id, clean_nominee)
 
     log_compliance_event(current_user.id, "DPDP", "NOMINATE", "fulfilled")
-    db.add_audit_log(current_user.id, "SET_NOMINEE", f"User nominated {clean_nominee['name']}")
+    await db.add_audit_log(current_user.id, "SET_NOMINEE", f"User nominated {clean_nominee['name']}")
     return {"status": "success", "message": "Nominee registered successfully"}
 
 
@@ -224,7 +224,7 @@ async def nominate_person(
 @limiter.limit("10/minute")
 async def get_nominee(request: Request, current_user: User = Depends(get_current_active_user)):
     """Get the registered nominee for the current user."""
-    nominee = db.get_nominee(current_user.id)
+    nominee = await db.get_nominee(current_user.id)
     return {"status": "success", "nominee": nominee}
 
 
@@ -249,11 +249,11 @@ async def log_grievance(
         "description": grievance["description"],
         "status": "open"
     }
-    db.add_grievance(grievance_data)
+    await db.add_grievance(grievance_data)
 
     log_compliance_event(current_user.id, "DPDP", "GRIEVANCE", "pending",
                          details=grievance['subject'])
-    db.add_audit_log(current_user.id, "LOG_GRIEVANCE", f"User logged a grievance: {grievance['subject']}")
+    await db.add_audit_log(current_user.id, "LOG_GRIEVANCE", f"User logged a grievance: {grievance['subject']}")
     return {
         "status": "success",
         "message": "Grievance logged successfully. Our Data Protection Officer will review it."
@@ -264,7 +264,7 @@ async def log_grievance(
 @limiter.limit("10/minute")
 async def get_my_grievances(request: Request, current_user: User = Depends(get_current_active_user)):
     """Get all grievances logged by the current user."""
-    grievances = db.get_grievances(current_user.id)
+    grievances = await db.get_grievances(current_user.id)
     return {"status": "success", "grievances": grievances}
 
 
@@ -275,7 +275,7 @@ async def get_my_grievances(request: Request, current_user: User = Depends(get_c
 @limiter.limit("10/minute")
 async def admin_get_all_grievances(request: Request, admin: User = Depends(get_admin_user)):
     """Retrieve all grievances for the Data Protection Officer."""
-    return {"status": "success", "grievances": db.get_grievances()}
+    return {"status": "success", "grievances": await db.get_grievances()}
 
 
 @router.post("/admin/grievances/{grievance_id}/resolve")
@@ -286,13 +286,11 @@ async def admin_resolve_grievance(
     admin: User = Depends(get_admin_user)
 ):
     """Mark a grievance as resolved."""
-    with db._lock:
-        for g in db.grievance_logs:
-            if g.get("id") == grievance_id:
-                g["status"] = "resolved"
-                db.add_audit_log(admin.id, "RESOLVE_GRIEVANCE", f"Admin resolved grievance {grievance_id}")
-                return {"status": "success", "message": f"Grievance {grievance_id} marked as resolved."}
-    raise HTTPException(status_code=404, detail="Grievance not found")
+    success = await db.resolve_grievance(grievance_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Grievance not found")
+    await db.add_audit_log(admin.id, "RESOLVE_GRIEVANCE", f"Admin resolved grievance {grievance_id}")
+    return {"status": "success", "message": f"Grievance {grievance_id} marked as resolved."}
 
 
 # ============================================================================
