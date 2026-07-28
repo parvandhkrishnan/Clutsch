@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Loader2, ExternalLink } from 'lucide-react';
 
@@ -45,7 +45,7 @@ const SSOPopup = () => {
         setError(err.detail || 'No account found with that email');
         setStep('email');
       }
-    } catch (err) {
+    } catch {
       setError('Connection error. Please try again.');
       setStep('email');
     } finally {

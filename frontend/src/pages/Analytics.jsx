@@ -1,45 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  LineChart, 
-  Line, 
-  PieChart, 
-  Pie, 
-  Cell,
-  Legend,
+import { useState, useEffect } from 'react';
+import {
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
   AreaChart,
   Area,
   Treemap
 } from 'recharts';
-import { 
-  Clock, 
-  Target, 
-  TrendingUp, 
-  Users,
+import {
+  Clock,
+  Target,
+  TrendingUp,
   AlertCircle,
   CheckCircle2,
   Zap,
-  Calendar,
   RefreshCw,
   Loader2
 } from 'lucide-react';
 import api from '../utils/api';
-
-const MOCK_TIME_TO_ACTION = [
-  { name: 'Mon', time: 45, high: 20, critical: 10 },
-  { name: 'Tue', time: 42, high: 18, critical: 8 },
-  { name: 'Wed', time: 38, high: 15, critical: 12 },
-  { name: 'Thu', time: 35, high: 22, critical: 5 },
-  { name: 'Fri', time: 30, high: 12, critical: 15 },
-  { name: 'Sat', time: 28, high: 10, critical: 3 },
-  { name: 'Sun', time: 25, high: 8, critical: 2 },
-];
 
 const MOCK_TREEMAP_DATA = [
   {
@@ -64,7 +44,7 @@ const MOCK_PRODUCTIVITY = [
 ];
 
 const CustomizedContent = (props) => {
-  const { root, depth, x, y, width, height, index, payload, colors, rank, name, value } = props;
+  const { depth, x, y, width, height, index, colors, name } = props;
 
   return (
     <g>

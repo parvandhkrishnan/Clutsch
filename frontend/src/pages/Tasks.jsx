@@ -1,15 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../utils/api';
-import { 
-  CheckSquare, 
-  Clock, 
-  Archive, 
-  Trash2, 
+import {
+  CheckSquare,
+  Clock,
+  Archive,
   Loader2,
-  Search,
-  Filter,
-  ArrowUpDown
+  Search
 } from 'lucide-react';
 
 const Tasks = () => {
@@ -41,10 +37,14 @@ const Tasks = () => {
   }, [fetchAllItems]);
 
   const filteredItems = items.filter(item => {
-    const matchesSearch = item.text.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const matchesSearch = item.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           item.source.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
+
+  // Computed once per render rather than calling Date.now() fresh inside
+  // the row-rendering loop below (a fallback for items with no created_at).
+  const nowMs = Date.now();
 
   return (
     <div className="tasks-page">
@@ -121,7 +121,7 @@ const Tasks = () => {
                     </span>
                   </div>
                   <div className="col-date">
-                    {new Date(item.created_at || Date.now()).toLocaleDateString()}
+                    {new Date(item.created_at || nowMs).toLocaleDateString()}
                   </div>
                   <div className="col-actions">
                     <button className="icon-btn" title="Archive"><Archive size={16} /></button>

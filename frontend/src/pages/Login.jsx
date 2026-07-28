@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogIn, Mail, Lock, Loader2, UserPlus, ArrowRight, Zap, CheckCircle2 } from 'lucide-react';
+import { LogIn, Loader2, UserPlus, ArrowRight, Zap, CheckCircle2 } from 'lucide-react';
 
 const Login = () => {
   const [mode, setMode] = useState('signin');
@@ -65,7 +65,7 @@ const Login = () => {
       } else {
         setError('Invalid username or password');
       }
-    } catch (err) {
+    } catch {
       setError('An error occurred during login');
     } finally {
       setIsSubmitting(false);
@@ -83,7 +83,7 @@ const Login = () => {
       } else {
         setError(result.error || 'Registration failed. Try again.');
       }
-    } catch (err) {
+    } catch {
       setError('An error occurred during registration');
     } finally {
       setIsSubmitting(false);

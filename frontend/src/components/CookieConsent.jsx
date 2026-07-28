@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 
@@ -26,7 +26,7 @@ const CookieConsent = () => {
       try {
         const data = await api.get('/dpdp/notice');
         if (!cancelled) setPurposesMeta(data?.purposes || null);
-      } catch (err) {
+      } catch {
         // Non-critical — if this fails we simply won't be able to sync
         // granular consent to the backend from the banner; localStorage
         // still records the user's accept/decline choice.
@@ -63,7 +63,7 @@ const CookieConsent = () => {
     try {
       await api.post('/dpdp/consent', body);
       localStorage.setItem('cookie-consent-synced', 'true');
-    } catch (err) {
+    } catch {
       // Non-critical for the banner UX — Settings > Privacy & Compliance
       // remains the authoritative place to manage/retry granular consent.
     }

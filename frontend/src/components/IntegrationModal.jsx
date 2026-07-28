@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 const IntegrationModal = ({ isOpen, onClose, integration, onConnectSuccess }) => {

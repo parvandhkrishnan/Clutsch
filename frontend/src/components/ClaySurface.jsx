@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * ClaySurface — Pressed-clay structural material.
  * Use for: cards, panels, input fields, sidebars, modals.

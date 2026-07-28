@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 const Onboarding = () => {
-  const { token } = useAuth();
+  useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [integrations, setIntegrations] = useState([]);
@@ -58,7 +58,12 @@ const Onboarding = () => {
     opacity: step === i ? 1 : 0.5,
   });
 
-  const WelcomeStep = () => (
+  // Plain JSX values, not components — each is used exactly once, in a
+  // fixed conditional slot below. Defining these as components (and
+  // rendering them as <WelcomeStep />) would recreate a new component
+  // definition every render, which React treats as a brand-new component
+  // instance each time.
+  const welcomeStep = (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', textAlign: 'center', padding: '40px 0', animation: 'fadeIn 250ms ease-out' }}>
       <div style={{ width: '80px', height: '80px', borderRadius: 'var(--radius-lg)', background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Zap size={40} style={{ color: 'var(--accent)' }} />
@@ -73,7 +78,7 @@ const Onboarding = () => {
     </div>
   );
 
-  const IntegrationStep = () => (
+  const integrationStep = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 250ms ease-out' }}>
       <div style={{ textAlign: 'center' }}>
         <h2 style={{ marginBottom: '8px' }}>Connect a Source</h2>
@@ -124,7 +129,7 @@ const Onboarding = () => {
     </div>
   );
 
-  const SurveyStep = () => (
+  const surveyStep = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 250ms ease-out' }}>
       <div style={{ textAlign: 'center' }}>
         <h2 style={{ marginBottom: '8px' }}>Tune Your AI</h2>
@@ -150,7 +155,7 @@ const Onboarding = () => {
     </div>
   );
 
-  const SyncStep = () => (
+  const syncStep = (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', textAlign: 'center', padding: '40px 0', animation: 'fadeIn 250ms ease-out' }}>
       {syncStatus === 'syncing' ? (
         <>
@@ -183,10 +188,10 @@ const Onboarding = () => {
           {[0, 1, 2, 3].map(i => <div key={i} style={dotStyle(i)} />)}
         </div>
 
-        {step === 0 && <WelcomeStep />}
-        {step === 1 && <IntegrationStep />}
-        {step === 2 && <SurveyStep />}
-        {step === 3 && <SyncStep />}
+        {step === 0 && welcomeStep}
+        {step === 1 && integrationStep}
+        {step === 2 && surveyStep}
+        {step === 3 && syncStep}
       </div>
 
       {selectedIntegration && (

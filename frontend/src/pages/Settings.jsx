@@ -16,10 +16,8 @@ import {
 } from 'lucide-react';
 import { showToast } from '../utils/toast';
 
-const API_BASE_URL = '';
-
 const Settings = () => {
-  const { token } = useAuth();
+  useAuth();
   const [priorities, setPriorities] = useState({});
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -38,7 +36,7 @@ const Settings = () => {
     try {
       const data = await api.get('/dpdp/consent');
       setConsentPrefs(data.consent_purposes || {});
-    } catch (err) {
+    } catch {
       // Silently fail — non-critical consent fetch
     }
   }, []);
@@ -67,7 +65,7 @@ const Settings = () => {
       });
       setConsentStatus(newValue ? 'Consent granted' : 'Consent withdrawn');
       setTimeout(() => setConsentStatus(''), 3000);
-    } catch (err) {
+    } catch {
       setConsentStatus('Update failed');
       setTimeout(() => setConsentStatus(''), 3000);
     } finally {
@@ -80,7 +78,7 @@ const Settings = () => {
       await api.post('/dpdp/nominate', nominee);
       setShowNominateModal(false);
       showToast("Nominee registered successfully.", "success");
-    } catch (err) {
+    } catch {
       showToast("Failed to register nominee.", "error");
     }
   };
@@ -91,7 +89,7 @@ const Settings = () => {
       setShowGrievanceModal(false);
       setGrievance({ subject: 'Data Access', description: '' });
       showToast("Grievance logged. We will respond within 7 days.", "success");
-    } catch (err) {
+    } catch {
       showToast("Failed to log grievance.", "error");
     }
   };
@@ -110,7 +108,7 @@ const Settings = () => {
       document.body.removeChild(a);
       setExportStatus('Export started!');
       setTimeout(() => setExportStatus(''), 5000);
-    } catch (err) {
+    } catch {
       setExportStatus('Export failed. Please try again.');
     }
   };
@@ -124,7 +122,7 @@ const Settings = () => {
         // but let's be explicit.
         localStorage.clear();
         window.location.href = '/login';
-      } catch (err) {
+      } catch {
         showToast("Failed to delete account. Please contact support.", "error");
       }
     }
@@ -158,7 +156,7 @@ const Settings = () => {
       setShowAddModal(false);
       setNewContact({ platform: 'gmail', handle: '', priority: 'high' });
       fetchPriorities();
-    } catch (err) {
+    } catch {
       // Mock update for demonstration
       const platform = newContact.platform;
       setPriorities(prev => ({
@@ -176,7 +174,7 @@ const Settings = () => {
     try {
       await api.delete(`/preferences/contacts/${platform}/${handle}`);
       fetchPriorities();
-    } catch (err) {
+    } catch {
       // Mock update
       setPriorities(prev => {
         const updated = { ...prev };

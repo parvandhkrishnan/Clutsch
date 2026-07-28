@@ -13,8 +13,12 @@ export default function useWebSocket(tenantId, userId, onMessage) {
   const reconnectTimerRef = useRef(null);
   const reconnectAttemptRef = useRef(0);
   const mountedRef = useRef(true);
-
-  const connect = useCallback(() => {
+  // connect() schedules a retry of itself via setTimeout on close/error.
+  // Referencing the `connect` const directly from within its own body works
+  // (by the time the timeout fires, the assignment below has long since
+  // completed) but the lint rule can't see that — routing through a ref
+  // avoids the self-reference entirely rather than leaving it flagged.
+  const connectRef = useRef(null);
     if (!tenantId || !userId || !mountedRef.current) return;
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -43,7 +47,7 @@ export default function useWebSocket(tenantId, userId, onMessage) {
           } else if (data.type === 'delegation_update' && onMessage) {
             onMessage(data);
           }
-        } catch (e) {
+        } catch {
           // Ignore malformed messages
         }
       };
@@ -55,20 +59,22 @@ export default function useWebSocket(tenantId, userId, onMessage) {
             RECONNECT_MAX_MS
           );
           reconnectAttemptRef.current += 1;
-          reconnectTimerRef.current = setTimeout(connect, delay);
+          reconnectTimerRef.current = setTimeout(() => connectRef.current(), delay);
         }
       };
 
       ws.onerror = () => {
         ws.close();
       };
-    } catch (e) {
+    } catch {
       // Connection failed — retry
       if (mountedRef.current) {
-        reconnectTimerRef.current = setTimeout(connect, RECONNECT_BASE_MS);
+        reconnectTimerRef.current = setTimeout(() => connectRef.current(), RECONNECT_BASE_MS);
       }
     }
   }, [tenantId, userId, onMessage]);
+
+  connectRef.current = connect;
 
   useEffect(() => {
     mountedRef.current = true;

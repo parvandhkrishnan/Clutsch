@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Check,
   CreditCard,
@@ -145,7 +145,7 @@ const Billing = () => {
                         });
                         showToast('Subscription successful! Your account has been upgraded.', 'success');
                         window.location.reload();
-                      } catch (err) {
+                      } catch {
                         showToast('Payment verification failed. Please contact support.', 'error');
                       }
                     },
@@ -163,7 +163,7 @@ const Billing = () => {
                     showToast('Payment failed: ' + response.error.description, 'error');
                   });
                   rzp.open();
-                } catch (err) {
+                } catch {
                   showToast('Failed to initiate checkout. Please try again.', 'error');
                 } finally {
                   setLoadingPlan(null);

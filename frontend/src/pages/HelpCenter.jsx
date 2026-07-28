@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
-import { 
-  Search, 
-  Book, 
-  MessageSquare, 
-  HelpCircle, 
-  Video, 
-  Terminal, 
-  FileText, 
+import { useState } from 'react';
+import {
+  Search,
+  Book,
+  MessageSquare,
+  Video,
+  Terminal,
+  FileText,
   Zap,
   ArrowRight,
   ChevronRight

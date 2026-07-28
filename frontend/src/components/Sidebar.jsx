@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import LegalModal from './LegalModal';
 import { 
-  LayoutDashboard, 
-  CheckSquare, 
-  Folder, 
-  MessageSquare, 
+  LayoutDashboard,
+  CheckSquare,
   Share2,
   Settings,
   LogOut,
@@ -18,8 +16,6 @@ import {
   HelpCircle,
   ShieldAlert
 } from 'lucide-react';
-
-const API_BASE_URL = '';
 
 const SidebarItem = ({ icon: Icon, label, to, badge, onClick }) => {
   if (onClick) {

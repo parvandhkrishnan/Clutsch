@@ -81,8 +81,6 @@ const PriorityGauge = ({ score }) => {
 };
 
 const ActionableItem = ({ item, isSelected, onSelect, onToggleSelect, showCheckbox }) => {
-  const SourceIcon = getSourceIcon(item.source);
-  
   const presence = item.presence || [];
 
   return (
@@ -111,7 +109,7 @@ const ActionableItem = ({ item, isSelected, onSelect, onToggleSelect, showCheckb
       )}
       <div className="item-header">
         <div className="item-source">
-          <SourceIcon size={14} />
+          {React.createElement(getSourceIcon(item.source), { size: 14 })}
           <span>{item.source}</span>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -298,12 +296,38 @@ const Dashboard = () => {
     });
   }, []);
 
-  // WebSocket for real-time updates
-  useWebSocket('t-acme', user?.id || 'anonymous', (data) => {
+  const fetchItems = useCallback(async () => {
+    try {
+      let url = '/priorities/feed';
+      if (viewMode === 'team') {
+        url = '/team/feed';
+      } else if (selectedTier !== 'all') {
+        url = `/priorities/feed?tier=${selectedTier}`;
+      }
+
+      const data = await api.get(url);
+      setItems(data);
+      setInitialLoad(false);
+    } catch {
+      // Silently fail — polling will retry
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedTier, viewMode]);
+
+  // WebSocket for real-time updates. Wrapped in useCallback so useWebSocket
+  // gets a stable onMessage across renders instead of a fresh inline
+  // function every time — an unstable callback here would make
+  // useWebSocket's internal `connect` (which depends on onMessage) change
+  // identity every render, tearing down and re-establishing the socket
+  // far more often than intended.
+  const handleWsMessage = useCallback((data) => {
     if (data.type === 'feed_update') {
       fetchItems();
     }
-  });
+  }, [fetchItems]);
+
+  useWebSocket('t-acme', user?.id || 'anonymous', handleWsMessage);
 
   const tourSteps = [
     {
@@ -335,7 +359,6 @@ const Dashboard = () => {
   }, [searchParams]);
 
   const tiers = ['all', 'urgent', 'high', 'medium', 'low'];
-  const sources = ['all', 'slack', 'gmail', 'outlook', 'teams', 'jira', 'whatsapp'];
   const dateRanges = [
     { value: 'all', label: 'All time' },
     { value: '24h', label: 'Past 24h' },
@@ -343,8 +366,7 @@ const Dashboard = () => {
     { value: '30d', label: 'Past 30 days' }
   ];
 
-  const getDateCutoff = (range) => {
-    const now = Date.now();
+  const getDateCutoff = (range, now) => {
     switch (range) {
       case '24h': return now - 24 * 60 * 60 * 1000;
       case '7d': return now - 7 * 24 * 60 * 60 * 1000;
@@ -352,6 +374,11 @@ const Dashboard = () => {
       default: return 0;
     }
   };
+
+  // Computed once per render rather than inside getDateCutoff/the filter
+  // callback below — calling Date.now() from deep inside a render-time
+  // computation is what the linter flags as impure.
+  const nowMs = Date.now();
 
   const filteredItems = items.filter(item => {
     // Keyword search
@@ -370,7 +397,7 @@ const Dashboard = () => {
     }
     // Date range filter
     if (dateFilter !== 'all') {
-      const cutoff = getDateCutoff(dateFilter);
+      const cutoff = getDateCutoff(dateFilter, nowMs);
       const itemTime = (item.timestamp || 0) * 1000;
       if (itemTime < cutoff) return false;
     }
@@ -382,25 +409,6 @@ const Dashboard = () => {
   });
 
   const availableSources = ['all', ...new Set(items.map(i => i.source?.toLowerCase()).filter(Boolean))];
-
-  const fetchItems = useCallback(async () => {
-    try {
-      let url = '/priorities/feed';
-      if (viewMode === 'team') {
-        url = '/team/feed';
-      } else if (selectedTier !== 'all') {
-        url = `/priorities/feed?tier=${selectedTier}`;
-      }
-      
-      const data = await api.get(url);
-      setItems(data);
-      setInitialLoad(false);
-    } catch (err) {
-      // Silently fail — polling will retry
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedTier, viewMode]);
 
   // Bulk actions
   const toggleSelectItem = (item) => {
@@ -431,14 +439,14 @@ const Dashboard = () => {
       setItems(prev => prev.filter(i => !selectedIds.has(i.id)));
       showToast(`Archived ${selectedIds.size} items`, 'success');
       setSelectedIds(new Set());
-    } catch (err) {
+    } catch {
       // Fallback: archive one by one
       let successCount = 0;
       for (const id of selectedIds) {
         try {
           await api.post(`/items/${id}/archive`);
           successCount++;
-        } catch (e) { /* skip */ }
+        } catch { /* skip */ }
       }
       setItems(prev => prev.filter(i => !selectedIds.has(i.id)));
       showToast(`Archived ${successCount} items`, 'success');
@@ -456,14 +464,14 @@ const Dashboard = () => {
       setItems(prev => prev.filter(i => !selectedIds.has(i.id)));
       showToast(`Snoozed ${selectedIds.size} items for ${duration}m`, 'success');
       setSelectedIds(new Set());
-    } catch (err) {
+    } catch {
       // Fallback: snooze one by one
       let successCount = 0;
       for (const id of selectedIds) {
         try {
           await api.post(`/items/${id}/snooze`, { hours: duration / 60 });
           successCount++;
-        } catch (e) { /* skip */ }
+        } catch { /* skip */ }
       }
       setItems(prev => prev.filter(i => !selectedIds.has(i.id)));
       showToast(`Snoozed ${successCount} items`, 'success');
@@ -494,7 +502,7 @@ const Dashboard = () => {
       try {
         const data = await api.get(`/team/items/${selectedItem.id}/presence`);
         setItemPresence(data);
-      } catch (err) {
+      } catch {
         // Silently fail
       }
     };
@@ -521,7 +529,7 @@ const Dashboard = () => {
       await api.post(`/items/${id}/archive`);
       setItems(prev => prev.filter(i => i.id !== id));
       showToast("Item archived");
-    } catch (err) {
+    } catch {
       showToast("Failed to archive item", "error");
     }
   };
@@ -531,7 +539,7 @@ const Dashboard = () => {
       await api.post(`/items/${id}/snooze`, { hours: duration / 60 });
       setItems(prev => prev.filter(i => i.id !== id));
       showToast(`Snoozed for ${duration}m`);
-    } catch (err) {
+    } catch {
       showToast("Failed to snooze item", "error");
     }
   };

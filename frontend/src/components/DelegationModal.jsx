@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, Search, User, Shield, Clock, Send, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Search, Shield, Clock, Send, Loader2 } from 'lucide-react';
 import api from '../utils/api';
 import { showToast } from '../utils/toast';
 import useFocusTrap from '../utils/useFocusTrap';
@@ -11,7 +11,7 @@ const DelegationModal = ({ isOpen, onClose, item, onDelegate }) => {
   const [note, setNote] = useState('');
   const [members, setMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
-  const focusTrap = useFocusTrap(isOpen);
+  useFocusTrap(isOpen);
 
   useEffect(() => {
     if (isOpen) {
@@ -20,7 +20,7 @@ const DelegationModal = ({ isOpen, onClose, item, onDelegate }) => {
         try {
           const data = await api.get('/team/members');
           setMembers(data);
-        } catch (err) {
+        } catch {
           // Silently fail — non-critical
         } finally {
           setLoadingMembers(false);
@@ -49,7 +49,7 @@ const DelegationModal = ({ isOpen, onClose, item, onDelegate }) => {
       });
       onDelegate(item.id, selectedMember, note);
       onClose();
-    } catch (err) {
+    } catch {
       showToast("Failed to delegate item. Please try again.", "error");
     } finally {
       setDelegating(false);

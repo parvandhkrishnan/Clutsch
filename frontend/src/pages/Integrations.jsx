@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import IntegrationModal from '../components/IntegrationModal';
 import IntegrationSettingsModal from '../components/IntegrationSettingsModal';
-import { 
-  Mail, 
-  MessageCircle, 
-  MessageSquare,
+import {
+  Mail,
+  MessageCircle,
   CheckCircle2,
   Users,
   LayoutGrid,
@@ -15,8 +13,6 @@ import {
   RefreshCw,
   Loader2
 } from 'lucide-react';
-
-const API_BASE_URL = '';
 
 const IntegrationCard = ({ id, name, icon: Icon, description, connected, isConnecting, isSyncing, onConnect, onSync, onManage }) => (
   <div className={`integration-card card ${connected ? 'connected' : ''}`}>
@@ -110,7 +106,6 @@ const IntegrationRow = ({ id, name, icon: Icon, account, connected, lastSync, is
 );
 
 const Integrations = () => {
-  const { token } = useAuth();
   const [viewMode, setViewMode] = useState('gallery');
   const [loading, setLoading] = useState(true);
   const [integrations, setIntegrations] = useState([]);
