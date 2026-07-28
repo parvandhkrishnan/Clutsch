@@ -39,9 +39,13 @@ jobs:
       # survive. NullPool avoids the "attached to a different loop" errors
       # this caused.
       SQLALCHEMY_NULL_POOL: "true"
-      ADMIN_PASSWORD: ci-admin-test-password-only
-      JOHN_PASSWORD: ci-john-test-password-only
-      SARAH_PASSWORD: ci-sarah-test-password-only
+      # These specific values are load-bearing, not arbitrary: every test
+      # file hardcodes login as admin123/password/sarah123 (via
+      # os.environ.setdefault, which only applies if unset — so CI's real
+      # value always wins and must match, or every login in the suite 401s).
+      ADMIN_PASSWORD: admin123
+      JOHN_PASSWORD: password
+      SARAH_PASSWORD: sarah123
       ALLOWED_ORIGINS: http://localhost:5173
       ENFORCE_HTTPS: "false"
 

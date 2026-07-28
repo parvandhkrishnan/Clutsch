@@ -5,6 +5,7 @@ import json
 import unittest
 import threading
 import asyncio
+import datetime
 
 # Set environment variables for testing before importing app modules
 os.environ["JWT_SECRET_KEY"] = "test-jwt-secret"
@@ -408,9 +409,10 @@ class TestDatabase(unittest.TestCase):
         self.assertEqual(logs[0]["details"], "details")
 
     def test_all_audit_logs(self):
-        db.add_audit_log("u-1", "A1", "d1")
-        db.add_audit_log("u-2", "A2", "d2")
-        logs = db.get_audit_logs()
+        # u-1 (admin) and u-2 (john) both belong to t-acme in the seed data
+        asyncio.run(db.add_audit_log("u-1", "A1", "d1"))
+        asyncio.run(db.add_audit_log("u-2", "A2", "d2"))
+        logs = asyncio.run(db.get_audit_logs("t-acme"))
         self.assertEqual(len(logs), 2)
 
     def test_contact_priorities(self):
@@ -522,41 +524,41 @@ class TestScoringService(unittest.TestCase):
         self.service = ScoringService(self.engine, self.analyzer)
 
     def test_process_items_empty(self):
-        result = self.service.process_items([], set(), {})
+        result = asyncio.run(self.service.process_items("t-acme", [], set(), {}))
         self.assertEqual(result, [])
 
     def test_archived_filtering(self):
         items = [{"id": "a1", "text": "test", "source": "gmail"}]
-        result = self.service.process_items(items, {"a1"}, {})
+        result = asyncio.run(self.service.process_items("t-acme", items, {"a1"}, {}))
         self.assertEqual(len(result), 0)
 
     def test_snoozed_filtering(self):
         items = [{"id": "s1", "text": "test", "source": "gmail"}]
         snoozed = {"s1": datetime.datetime.now() + datetime.timedelta(hours=1)}
-        result = self.service.process_items(items, set(), snoozed)
+        result = asyncio.run(self.service.process_items("t-acme", items, set(), snoozed))
         self.assertEqual(len(result), 0)
 
     def test_source_signals_jira_highest(self):
         items = [{"id": "j1", "text": "Bug", "source": "Jira", "metadata": {"priority": "highest", "issue_type": "bug"}}]
-        result = self.service.process_items(items, set(), {})
+        result = asyncio.run(self.service.process_items("t-acme", items, set(), {}))
         self.assertEqual(len(result), 1)
         self.assertIn("Highest Jira priority override", result[0]["explanation"])
 
     def test_source_signals_slack_dm(self):
         items = [{"id": "s1", "text": "Hey", "source": "Slack", "metadata": {"message_type": "dm"}}]
-        result = self.service.process_items(items, set(), {})
+        result = asyncio.run(self.service.process_items("t-acme", items, set(), {}))
         self.assertIn("Direct Message", result[0]["explanation"])
 
     def test_contact_priority_high(self):
         items = [{"id": "c1", "text": "Hello", "source": "gmail", "sender": {"handle": "boss@acme.com"}}]
         contacts = {"gmail": {"boss@acme.com": "high"}}
-        result = self.service.process_items(items, set(), {}, contacts)
+        result = asyncio.run(self.service.process_items("t-acme", items, set(), {}, contacts))
         self.assertIn("High priority contact", result[0]["explanation"])
 
     def test_contact_priority_low(self):
         items = [{"id": "c1", "text": "Hello", "source": "gmail", "sender": {"handle": "spam@ads.com"}}]
         contacts = {"gmail": {"spam@ads.com": "low"}}
-        result = self.service.process_items(items, set(), {}, contacts)
+        result = asyncio.run(self.service.process_items("t-acme", items, set(), {}, contacts))
         self.assertIn("Low priority contact", result[0]["explanation"])
 
     def test_tier_boundaries(self):
@@ -612,7 +614,7 @@ class TestRetries(unittest.TestCase):
             if call_count[0] < 3:
                 raise ValueError("fail")
             return "success"
-        result = asyncio.get_event_loop().run_until_complete(async_flaky())
+        result = asyncio.run(async_flaky())
         self.assertEqual(result, "success")
         self.assertEqual(call_count[0], 3)
 
@@ -624,7 +626,7 @@ class TestRetries(unittest.TestCase):
             call_count[0] += 1
             raise ValueError("fail")
         with self.assertRaises(ValueError):
-            asyncio.get_event_loop().run_until_complete(async_always_fail())
+            asyncio.run(async_always_fail())
         self.assertEqual(call_count[0], 2)
 
 class TestWorker(unittest.TestCase):

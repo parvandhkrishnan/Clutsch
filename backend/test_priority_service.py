@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import json
 from prioritizer import PriorityEngine
@@ -32,7 +33,7 @@ def test_scoring_logic():
         }
     ]
     
-    processed = service.process_items("t-acme", items, set(), {})
+    processed = asyncio.run(service.process_items("t-acme", items, set(), {}))
     
     for item in processed:
         print(f"Source: {item['source']}, Score: {item['priorityScore']}, Tier: {item['priorityTier']}")
@@ -76,7 +77,7 @@ def test_scoring_logic():
         }
     ]
     
-    processed_contacts = service.process_items("t-acme", items_with_contacts, set(), {}, contact_priorities)
+    processed_contacts = asyncio.run(service.process_items("t-acme", items_with_contacts, set(), {}, contact_priorities))
     boss_item = next(i for i in processed_contacts if i["id"] == "c-1")
     spam_item = next(i for i in processed_contacts if i["id"] == "c-2")
     
