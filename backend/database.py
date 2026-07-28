@@ -190,14 +190,15 @@ class MockDatabase:
                 if "id" not in item:
                     item["id"] = str(uuid.uuid4())
                 fields = _item_fields_from_dict(item)
-                # Only look up an existing row when there's a real external_id
-                # to match on. `Item.external_id == None` compiles to `IS
-                # NULL`, which would match ANY prior item from the same
-                # source/tenant that also has no external_id — silently
-                # collapsing unrelated items (e.g. manually created ones)
-                # into a single overwritten row instead of inserting each
-                # one distinctly.
-                existing = None
+                # `Item.external_id == None` compiles to `IS NULL`, which
+                # would match ANY prior item from the same source/tenant
+                # that also has no external_id — silently collapsing
+                # unrelated items (e.g. manually created ones) into a
+                # single overwritten row instead of inserting each one
+                # distinctly. When there's no real external_id to match on,
+                # fall back to matching by the caller-provided id instead —
+                # correctly treats "same id passed again" as an update, and
+                # "different/fresh id, no external_id" as a distinct insert.
                 if fields["external_id"] is not None:
                     result = await session.execute(
                         select(Item).where(
@@ -206,7 +207,9 @@ class MockDatabase:
                             Item.tenant_id == fields["tenant_id"],
                         )
                     )
-                    existing = result.scalar_one_or_none()
+                else:
+                    result = await session.execute(select(Item).where(Item.id == item["id"]))
+                existing = result.scalar_one_or_none()
                 ts = _parse_timestamp(item.get("timestamp"))
                 if existing:
                     for key, value in fields.items():

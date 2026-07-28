@@ -333,11 +333,16 @@ async def sync_all_integrations(tenant_id: str):
             contact_priorities
         )
 
-        # 3. Run Workflows
-        await workflow_service.run_workflows_for_items(tenant_id, scored_items)
-
-        # 4. Save to DB
+        # 3. Save to DB first — workflow actions (archive_item/snooze_item/
+        # delegate_item) update an EXISTING Item row's own columns now
+        # (is_archived/is_snoozed/etc, see models.py), unlike the old
+        # separate archived-ids-set that didn't require the row to exist
+        # yet. Running workflows before the row exists silently no-ops
+        # every action.
         await db.upsert_items(scored_items)
+
+        # 4. Run Workflows
+        await workflow_service.run_workflows_for_items(tenant_id, scored_items)
         logger.info(f"SYNC_COMPLETE: {len(scored_items)} items prioritized and workflow-processed for tenant {tenant_id}")
 
     # Notify via WebSocket if any new items were found
