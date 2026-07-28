@@ -255,7 +255,9 @@ def upgrade() -> None:
     op.create_table(
         "audit_logs",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("user_id", sa.String(), nullable=False),
+        # Nullable: some entries are system-generated (automated workflow
+        # actions, payment webhooks), not tied to a specific user.
+        sa.Column("user_id", sa.String(), nullable=True),
         sa.Column("tenant_id", sa.String(), nullable=True),
         sa.Column("action", sa.String(100), nullable=False),
         sa.Column("details", sa.Text(), nullable=True),

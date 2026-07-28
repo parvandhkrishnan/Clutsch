@@ -24,7 +24,16 @@ _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # specific to this fixture — production code should NOT silently resurrect
 # a deleted account with its old id, which is why this lives here and not
 # in auth/models.py.
-_SEED_TENANTS = [("t-acme", "Acme Corp", "acme.com"), ("t-globex", "Globex Corporation", "globex.com")]
+_SEED_TENANTS = [
+    ("t-acme", "Acme Corp", "acme.com"),
+    ("t-globex", "Globex Corporation", "globex.com"),
+    # "t1" is used throughout the test suite as an ad-hoc tenant id for items
+    # unrelated to auth (e.g. TestDatabase's raw item/audit-log tests). Item,
+    # Grievance, etc. all have a real FK to tenants.id now, so it needs to
+    # actually exist rather than being an arbitrary string like the old
+    # in-memory mock allowed.
+    ("t1", "Test Tenant 1", "t1.test"),
+]
 _SEED_USERS = [
     ("u-1", "admin", "admin@acme.com", "t-acme", "admin", "ADMIN_PASSWORD"),
     ("u-2", "john", "john@acme.com", "t-acme", "user", "JOHN_PASSWORD"),

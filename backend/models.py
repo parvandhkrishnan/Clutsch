@@ -262,7 +262,10 @@ class AuditLog(Base):
     __tablename__ = "audit_logs"
 
     id = Column(String, primary_key=True, default=gen_uuid)
-    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    # Nullable: some audit entries are system-generated (automated workflow
+    # actions, payment webhooks) rather than tied to a specific user — see
+    # workflow_service.py / razorpay_routes.py's "system" actor entries.
+    user_id = Column(String, ForeignKey("users.id"), nullable=True, index=True)
     tenant_id = Column(String, ForeignKey("tenants.id"), nullable=True)
     action = Column(String(100), nullable=False)
     details = Column(Text, nullable=True)

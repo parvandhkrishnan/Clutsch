@@ -185,7 +185,7 @@ async def handle_subscription_activated(subscription):
     
     if tenant_id:
         await db.update_billing_plan(tenant_id, plan, subscription_id)
-        await db.add_audit_log("system", "razorpay_subscription_activated", f"Tenant {tenant_id} upgraded to {plan}")
+        await db.add_audit_log(None, "razorpay_subscription_activated", f"Tenant {tenant_id} upgraded to {plan}")
         logger.info(f"Razorpay Subscription activated for tenant {tenant_id}: {plan}")
 
 async def handle_subscription_deactivated(subscription):
@@ -193,7 +193,7 @@ async def handle_subscription_deactivated(subscription):
     tenant_id = notes.get("tenant_id")
     if tenant_id:
         await db.update_billing_plan(tenant_id, "Free")
-        await db.add_audit_log("system", "razorpay_subscription_deactivated", f"Tenant {tenant_id} downgraded to Free")
+        await db.add_audit_log(None, "razorpay_subscription_deactivated", f"Tenant {tenant_id} downgraded to Free")
         logger.info(f"Razorpay Subscription deactivated for tenant {tenant_id}")
 
 async def handle_mock_webhook(data):

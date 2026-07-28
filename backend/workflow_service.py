@@ -70,13 +70,13 @@ class WorkflowService:
 
             if action_type == "archive":
                 await self.db.archive_item(tenant_id, item_id)
-                await self.db.add_audit_log("system", "workflow_archive", f"Auto-archived item {item_id}")
+                await self.db.add_audit_log(None, "workflow_archive", f"Auto-archived item {item_id}")
 
             elif action_type == "snooze":
                 hours = params.get("hours", 24)
                 until = datetime.datetime.now() + datetime.timedelta(hours=hours)
                 await self.db.snooze_item(tenant_id, item_id, until)
-                await self.db.add_audit_log("system", "workflow_snooze", f"Auto-snoozed item {item_id} for {hours}h")
+                await self.db.add_audit_log(None, "workflow_snooze", f"Auto-snoozed item {item_id} for {hours}h")
 
             elif action_type == "delegate":
                 to_user_id = params.get("to_user_id")
@@ -94,6 +94,6 @@ class WorkflowService:
                             await notify_delegation(tenant_id, to_user_id, item_id, "System")
                         except Exception:
                             pass
-                        await self.db.add_audit_log("system", "workflow_delegate", f"Auto-delegated item {item_id} to {to_user_id}")
+                        await self.db.add_audit_log(None, "workflow_delegate", f"Auto-delegated item {item_id} to {to_user_id}")
 
 workflow_service = WorkflowService(db)

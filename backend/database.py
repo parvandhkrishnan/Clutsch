@@ -333,7 +333,10 @@ class MockDatabase:
     # ------------------------------------------------------------------
     # Audit log
     # ------------------------------------------------------------------
-    async def add_audit_log(self, user_id: str, action: str, details: str) -> None:
+    async def add_audit_log(self, user_id: Optional[str], action: str, details: str) -> None:
+        # user_id may be None for system-generated entries (automated
+        # workflow actions, payment webhooks) — see AuditLog.user_id in
+        # models.py, which is nullable for exactly this reason.
         async with AsyncSessionLocal() as session:
             session.add(AuditLog(user_id=user_id, action=action, details=details, timestamp=time.time()))
             await session.commit()

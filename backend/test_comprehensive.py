@@ -374,36 +374,38 @@ class TestAuthModels(unittest.TestCase):
 
 class TestDatabase(unittest.TestCase):
     def setUp(self):
-        db.clear()
+        asyncio.run(db.clear())
 
     def test_add_and_get_items(self):
-        db.add_item({"id": "d1", "tenant_id": "t1", "text": "Hello", "source": "gmail"})
-        items = db.get_items("t1")
+        asyncio.run(db.add_item({"id": "d1", "tenant_id": "t1", "text": "Hello", "source": "gmail"}))
+        items = asyncio.run(db.get_items("t1"))
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0]["text"], "Hello")
 
     def test_delete_tenant_data(self):
-        db.add_item({"id": "d1", "tenant_id": "t1", "text": "Hello", "source": "gmail"})
-        db.delete_tenant_data("t1")
-        self.assertEqual(len(db.get_items("t1")), 0)
+        asyncio.run(db.add_item({"id": "d1", "tenant_id": "t1", "text": "Hello", "source": "gmail"}))
+        asyncio.run(db.delete_tenant_data("t1"))
+        self.assertEqual(len(asyncio.run(db.get_items("t1"))), 0)
 
     def test_upsert_items(self):
-        db.upsert_items([
+        asyncio.run(db.upsert_items([
             {"id": "u1", "tenant_id": "t1", "text": "First", "source": "slack"},
             {"id": "u2", "tenant_id": "t1", "text": "Second", "source": "slack"}
-        ])
-        self.assertEqual(len(db.get_items("t1")), 2)
-        db.upsert_items([
+        ]))
+        self.assertEqual(len(asyncio.run(db.get_items("t1"))), 2)
+        asyncio.run(db.upsert_items([
             {"id": "u1", "tenant_id": "t1", "text": "Updated", "source": "slack"}
-        ])
-        items = db.get_items("t1")
+        ]))
+        items = asyncio.run(db.get_items("t1"))
         self.assertEqual(len(items), 2)
         texts = [i["text"] for i in items]
         self.assertIn("Updated", texts)
 
     def test_audit_logs(self):
-        db.add_audit_log("u-1", "ACTION", "details")
-        logs = db.get_audit_logs("u-1")
+        asyncio.run(db.add_audit_log("u-1", "ACTION", "details"))
+        # get_audit_logs() filters by tenant_id (via that tenant's user ids) —
+        # u-1 (admin) belongs to t-acme in the seed data.
+        logs = asyncio.run(db.get_audit_logs("t-acme"))
         self.assertEqual(len(logs), 1)
         self.assertEqual(logs[0]["action"], "ACTION")
         self.assertEqual(logs[0]["details"], "details")
@@ -416,37 +418,37 @@ class TestDatabase(unittest.TestCase):
         self.assertEqual(len(logs), 2)
 
     def test_contact_priorities(self):
-        db.set_contact_priority("t1", "gmail", "boss@acme.com", "high")
-        self.assertEqual(db.get_contact_priorities("t1")["gmail"]["boss@acme.com"], "high")
-        db.delete_contact_priority("t1", "gmail", "boss@acme.com")
-        self.assertEqual(db.get_contact_priorities("t1"), {})
+        asyncio.run(db.set_contact_priority("t1", "gmail", "boss@acme.com", "high"))
+        self.assertEqual(asyncio.run(db.get_contact_priorities("t1"))["gmail"]["boss@acme.com"], "high")
+        asyncio.run(db.delete_contact_priority("t1", "gmail", "boss@acme.com"))
+        self.assertEqual(asyncio.run(db.get_contact_priorities("t1")), {})
 
     def test_consent(self):
-        db.record_consent("u-1", {"version": "1.0", "purpose": "test"})
-        consents = db.get_consents("u-1")
+        asyncio.run(db.record_consent("u-1", {"version": "1.0", "purpose": "test"}))
+        consents = asyncio.run(db.get_consents("u-1"))
         self.assertEqual(len(consents), 1)
         self.assertEqual(consents[0]["version"], "1.0")
 
     def test_nominee(self):
-        db.set_nominee("u-1", {"name": "Jane", "email": "jane@example.com", "relationship": "Spouse"})
-        nominee = db.get_nominee("u-1")
+        asyncio.run(db.set_nominee("u-1", {"name": "Jane", "email": "jane@example.com", "relationship": "Spouse"}))
+        nominee = asyncio.run(db.get_nominee("u-1"))
         self.assertEqual(nominee["name"], "Jane")
 
     def test_grievance(self):
-        db.add_grievance({"user_id": "u-1", "tenant_id": "t1", "subject": "S", "description": "D", "status": "open"})
-        grievances = db.get_grievances("u-1")
+        asyncio.run(db.add_grievance({"user_id": "u-1", "tenant_id": "t-acme", "subject": "S", "description": "D", "status": "open"}))
+        grievances = asyncio.run(db.get_grievances("u-1"))
         self.assertEqual(len(grievances), 1)
-        all_grievances = db.get_grievances()
+        all_grievances = asyncio.run(db.get_grievances())
         self.assertEqual(len(all_grievances), 1)
 
     def test_enforce_retention_policy(self):
         old_item = {"id": "old", "tenant_id": "t1", "text": "Old", "source": "gmail", "timestamp": time.time() - (40 * 24 * 60 * 60)}
         new_item = {"id": "new", "tenant_id": "t1", "text": "New", "source": "gmail", "timestamp": time.time()}
-        db.add_item(old_item)
-        db.add_item(new_item)
-        deleted = db.enforce_retention_policy(days=30)
+        asyncio.run(db.add_item(old_item))
+        asyncio.run(db.add_item(new_item))
+        deleted = asyncio.run(db.enforce_retention_policy(days=30))
         self.assertEqual(deleted, 1)
-        self.assertEqual(len(db.get_items("t1")), 1)
+        self.assertEqual(len(asyncio.run(db.get_items("t1"))), 1)
 
 class TestSecurity(unittest.TestCase):
     def test_encrypt_decrypt(self):

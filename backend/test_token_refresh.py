@@ -25,14 +25,11 @@ async def test_refresh():
     await sync_all_integrations(tenant_id)
     
     # Check if token was refreshed
-    new_config = db.get_integration_config(tenant_id, provider)
+    new_config = await db.get_integration_config(tenant_id, provider)
     new_expiry = new_config.get("token_expiry")
     print(f"New expiry: {new_expiry}")
-    
-    if new_expiry > expired_expiry:
-        print("SUCCESS: Token was refreshed during sync.")
-    else:
-        print("FAILURE: Token was NOT refreshed.")
+
+    assert new_expiry > expired_expiry, "Token was NOT refreshed during sync."
 
 if __name__ == "__main__":
     asyncio.run(test_refresh())
