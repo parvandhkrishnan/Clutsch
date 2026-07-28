@@ -7,13 +7,14 @@ global.fetch = vi.fn();
 // Mock window.location
 const originalLocation = window.location;
 delete window.location;
-window.location = { ...originalLocation, href: '' };
+window.location = { ...originalLocation, href: '', hash: '' };
 
 describe('API Utility', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
     window.location.href = '';
+    window.location.hash = '';
   });
 
   it('should include Authorization header if token exists', async () => {
@@ -98,7 +99,9 @@ describe('API Utility', () => {
 
     await expect(api.get('/test')).rejects.toThrow('Unauthorized');
 
-    expect(window.location.href).toBe('/login');
+    // App.jsx uses HashRouter — navigation happens via the URL hash, not
+    // window.location.href/pathname.
+    expect(window.location.hash).toBe('#/login');
     expect(localStorage.getItem('token')).toBeNull();
     expect(localStorage.getItem('refresh_token')).toBeNull();
   });
@@ -115,7 +118,7 @@ describe('API Utility', () => {
 
     await expect(api.get('/test')).rejects.toThrow('Unauthorized');
 
-    expect(window.location.href).toBe('/login');
+    expect(window.location.hash).toBe('#/login');
     expect(localStorage.getItem('token')).toBeNull();
   });
   
