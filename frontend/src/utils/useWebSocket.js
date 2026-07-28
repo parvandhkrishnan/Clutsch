@@ -76,7 +76,13 @@ export default function useWebSocket(tenantId, userId, onMessage) {
     }
   }, [tenantId, userId, onMessage]);
 
-  connectRef.current = connect;
+  // Mutating a ref during render is unsafe (React's compiler flags it) —
+  // keep it updated via an effect instead. No dependency array: runs after
+  // every render, so connectRef always reflects the latest connect by the
+  // time it's actually invoked (asynchronously, from a setTimeout).
+  useEffect(() => {
+    connectRef.current = connect;
+  });
 
   useEffect(() => {
     mountedRef.current = true;
