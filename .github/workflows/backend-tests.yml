@@ -77,8 +77,16 @@ jobs:
         # `requests` against a running http://localhost instance rather than
         # FastAPI's in-process TestClient) — those need a different kind of
         # CI job (start the server, then hit it) and are not run here.
+        #
+        # --continue-on-collection-errors: some test files still import names
+        # (archived_items, connected_integrations, etc.) removed by the
+        # database migration and fail to even load. By default pytest aborts
+        # the entire run on any collection error; this flag lets the rest of
+        # the suite run anyway so this workflow shows real pass/fail signal
+        # for everything else instead of reporting nothing at all.
         run: >-
           pytest -v
+          --continue-on-collection-errors
           --ignore=test_api.py
           --ignore=test_auth.py
           --ignore=test_health.py
