@@ -70,5 +70,8 @@ async def delete_account(request: Request, current_user: User = Depends(get_curr
 @limiter.limit("10/minute")
 async def get_my_audit_logs(request: Request, current_user: User = Depends(get_current_active_user)):
     # Optional: allow users to see their own privacy-related audit logs
-    logs = await db.get_audit_logs(current_user.id)
+    # get_audit_logs() expects a tenant_id (it finds users belonging to
+    # that tenant, then returns their audit rows) — passing the user's own
+    # id here always returned [] since no tenant has that id.
+    logs = await db.get_audit_logs(current_user.tenant_id)
     return {"logs": logs}

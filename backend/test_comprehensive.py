@@ -67,21 +67,54 @@ class TestAuthRoutes(unittest.TestCase):
         resp = client.post("/auth/refresh", json={"refresh_token": "invalid.token.here"})
         self.assertEqual(resp.status_code, 401)
 
+    def test_sso_login_disabled_by_default(self):
+        # Secure default: without ENABLE_SIMULATED_SSO explicitly set to
+        # "true", the endpoint must fail closed with 501 rather than acting
+        # as an unauthenticated login bypass. This is the important
+        # regression-prevention case for the SSO security fix.
+        saved = os.environ.pop("ENABLE_SIMULATED_SSO", None)
+        try:
+            resp = client.post("/auth/sso/login", json={"email": "sarah@globex.com", "provider": "okta"})
+            self.assertEqual(resp.status_code, 501)
+        finally:
+            if saved is not None:
+                os.environ["ENABLE_SIMULATED_SSO"] = saved
+
     def test_sso_login_success(self):
-        resp = client.post("/auth/sso/login", json={"email": "sarah@globex.com", "provider": "okta"})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn("access_token", resp.json())
+        # Opted-in behavior: with ENABLE_SIMULATED_SSO="true", an existing
+        # user's email should authenticate successfully.
+        saved = os.environ.get("ENABLE_SIMULATED_SSO")
+        os.environ["ENABLE_SIMULATED_SSO"] = "true"
+        try:
+            resp = client.post("/auth/sso/login", json={"email": "sarah@globex.com", "provider": "okta"})
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("access_token", resp.json())
+        finally:
+            if saved is None:
+                os.environ.pop("ENABLE_SIMULATED_SSO", None)
+            else:
+                os.environ["ENABLE_SIMULATED_SSO"] = saved
 
     def test_sso_login_user_not_found(self):
-        resp = client.post("/auth/sso/login", json={"email": "nobody@nowhere.com", "provider": "okta"})
-        self.assertEqual(resp.status_code, 404)
+        # Opted-in behavior: with ENABLE_SIMULATED_SSO="true", an unknown
+        # email should 404.
+        saved = os.environ.get("ENABLE_SIMULATED_SSO")
+        os.environ["ENABLE_SIMULATED_SSO"] = "true"
+        try:
+            resp = client.post("/auth/sso/login", json={"email": "nobody@nowhere.com", "provider": "okta"})
+            self.assertEqual(resp.status_code, 404)
+        finally:
+            if saved is None:
+                os.environ.pop("ENABLE_SIMULATED_SSO", None)
+            else:
+                os.environ["ENABLE_SIMULATED_SSO"] = saved
 
 class TestMainEndpoints(unittest.TestCase):
     def setUp(self):
         db.clear()
         self.token = create_access_token({"user_id": "u-2", "tenant_id": "t-acme", "role": "user"})
         self.headers = {"Authorization": f"Bearer {self.token}"}
-        db.add_item({"id": "item-1", "tenant_id": "t-acme", "text": "Test item", "source": "gmail"})
+        asyncio.run(db.add_item({"id": "item-1", "tenant_id": "t-acme", "text": "Test item", "source": "gmail"}))
 
     def test_root(self):
         resp = client.get("/")
@@ -175,7 +208,7 @@ class TestPrivacyRoutes(unittest.TestCase):
         db.clear()
         self.token = create_access_token({"user_id": "u-2", "tenant_id": "t-acme", "role": "user"})
         self.headers = {"Authorization": f"Bearer {self.token}"}
-        db.add_item({"id": "priv-1", "tenant_id": "t-acme", "text": "Private note", "source": "manual"})
+        asyncio.run(db.add_item({"id": "priv-1", "tenant_id": "t-acme", "text": "Private note", "source": "manual"}))
 
     def test_export_data(self):
         resp = client.get("/privacy/export", headers=self.headers)
@@ -190,10 +223,10 @@ class TestPrivacyRoutes(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn("deleted", resp.json()["message"].lower())
         # Verify data gone
-        self.assertEqual(len(db.get_items("t-acme")), 0)
+        self.assertEqual(len(asyncio.run(db.get_items("t-acme"))), 0)
 
     def test_audit_logs(self):
-        db.add_audit_log("u-2", "TEST_ACTION", "Test details")
+        asyncio.run(db.add_audit_log("u-2", "TEST_ACTION", "Test details"))
         resp = client.get("/privacy/audit-logs", headers=self.headers)
         self.assertEqual(resp.status_code, 200)
         logs = resp.json()["logs"]
@@ -212,19 +245,24 @@ class TestDPDPRoutes(unittest.TestCase):
         self.assertIn("rights", resp.json())
 
     def test_record_consent(self):
-        resp = client.post("/dpdp/consent", json={"version": "1.0", "purpose": "Testing"}, headers=self.headers)
+        resp = client.post("/dpdp/consent", json={"marketing_communications": True}, headers=self.headers)
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.json()["status"], "success")
+        data = resp.json()
+        self.assertEqual(data["status"], "success")
+        self.assertIn("marketing_communications", data["updated_purposes"])
+        self.assertEqual(data["current_preferences"]["marketing_communications"], True)
 
     def test_record_consent_missing_fields(self):
         resp = client.post("/dpdp/consent", json={"version": "1.0"}, headers=self.headers)
         self.assertEqual(resp.status_code, 400)
 
     def test_get_consent_history(self):
-        client.post("/dpdp/consent", json={"version": "1.0", "purpose": "Testing"}, headers=self.headers)
+        client.post("/dpdp/consent", json={"marketing_communications": True}, headers=self.headers)
         resp = client.get("/dpdp/consent", headers=self.headers)
         self.assertEqual(resp.status_code, 200)
-        self.assertTrue(len(resp.json()["consent_history"]) > 0)
+        purposes = resp.json()["consent_purposes"]
+        self.assertIn("marketing_communications", purposes)
+        self.assertEqual(purposes["marketing_communications"]["enabled"], True)
 
     def test_nominate_person(self):
         resp = client.post("/dpdp/nominate", json={"name": "Jane Doe", "email": "jane@example.com", "relationship": "Spouse"}, headers=self.headers)
@@ -269,7 +307,7 @@ class TestDPDPRoutes(unittest.TestCase):
     def test_admin_resolve_grievance(self):
         admin_token = create_access_token({"user_id": "u-1", "tenant_id": "t-acme", "role": "admin"})
         client.post("/dpdp/grievance", json={"subject": "Data issue", "description": "I cannot see my data"}, headers=self.headers)
-        grievance = db.get_grievances("u-2")[0]
+        grievance = asyncio.run(db.get_grievances("u-2"))[0]
         resp = client.post(f"/dpdp/admin/grievances/{grievance['id']}/resolve", headers={"Authorization": f"Bearer {admin_token}"})
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()["status"], "success")
@@ -299,7 +337,7 @@ class TestPreferenceRoutes(unittest.TestCase):
         resp = client.delete("/preferences/contacts/gmail/boss@acme.com", headers=self.headers)
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()["status"], "success")
-        self.assertEqual(db.get_contact_priorities("t-acme"), {})
+        self.assertEqual(asyncio.run(db.get_contact_priorities("t-acme")), {})
 
 class TestAuthDependencies(unittest.TestCase):
     def setUp(self):
@@ -358,7 +396,7 @@ class TestAuthModels(unittest.TestCase):
         created = asyncio.run(add_user(
             username="testuser", email="test@test.com", password="",
             hashed_password=pwd_context.hash("testpass"),
-            tenant_id="t-test", role="user"
+            tenant_id="t-acme", role="user"
         ))
         self.assertIsNotNone(asyncio.run(get_user_by_username("testuser")))
         asyncio.run(delete_user(created.id))
@@ -497,8 +535,16 @@ class TestPrioritizer(unittest.TestCase):
 
     def test_score_calculation(self):
         engine = PriorityEngine()
+        # With default weights (urgency 0.3, importance 0.3, sender_rank 0.2,
+        # deadline 0.2, summing to 1.0) and no deadline supplied, the
+        # deadline factor is legitimately 0.0 (see calculate_deadline_factor
+        # for deadline=None), so a fully-maxed urgency/importance/sender_rank
+        # can only reach 0.8, not 1.0. Confirmed against test_custom_weights
+        # below, which uses an explicit deadline weight of 0.0 and correctly
+        # expects the un-scaled 0.5. The formula in prioritizer.py is
+        # correct and intentional; this test's expected value was stale.
         score = engine.score(urgency=1.0, importance=1.0, sender_rank=1.0)
-        self.assertEqual(score, 1.0)
+        self.assertEqual(score, 0.8)
 
     def test_custom_weights(self):
         engine = PriorityEngine(weights={"urgency": 1.0, "importance": 0.0, "sender_rank": 0.0, "deadline": 0.0})

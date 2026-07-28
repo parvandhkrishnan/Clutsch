@@ -36,20 +36,20 @@ class TestSecurity(unittest.TestCase):
         # Actually, let's see if /items POST exists. 
         # Looking at main.py earlier, I didn't see a POST /items.
         # But for testing, we can inject into db directly.
-        db.add_item({
+        asyncio.run(db.add_item({
             "id": "item-a",
             "tenant_id": "t-acme",
             "text": "Secret item for A",
             "content": "Secret content for A"
-        })
+        }))
         self.item_a = {"id": "item-a"}
-        
-        db.add_item({
+
+        asyncio.run(db.add_item({
             "id": "item-b",
             "tenant_id": "t-globex",
             "text": "Secret item for B",
             "content": "Secret content for B"
-        })
+        }))
         self.item_b = {"id": "item-b"}
 
     def test_secret_encryption(self):

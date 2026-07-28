@@ -92,13 +92,22 @@ def test_validate_secrets_at_startup():
 # =============================================================================
 
 def test_cors_allows_known_origin():
-    """CORS should allow configured origins."""
+    """CORS should allow configured origins.
+
+    main.py reads ALLOWED_ORIGINS from the environment, defaulting to
+    "http://localhost:5173,http://localhost:3000" if unset. This module's
+    own os.environ.setdefault(...) above only applies when the var isn't
+    already set — and CI (.github/workflows/backend-tests.yml) sets it
+    explicitly to just "http://localhost:5173", which wins. So the only
+    origin guaranteed to be allowed in every environment this suite runs in
+    is http://localhost:5173, not :3000.
+    """
     resp = client.options("/health", headers={
-        "Origin": "http://localhost:3000",
+        "Origin": "http://localhost:5173",
         "Access-Control-Request-Method": "GET",
     })
     assert resp.status_code == 200
-    assert resp.headers.get("access-control-allow-origin") == "http://localhost:3000"
+    assert resp.headers.get("access-control-allow-origin") == "http://localhost:5173"
 
 
 def test_cors_rejects_unknown_origin():
@@ -340,13 +349,13 @@ def test_encrypt_decrypt_empty():
 def test_integration_tokens_encrypted_at_rest():
     """Integration tokens stored in the database should be encrypted."""
     from security import encrypt_secret
-    db.save_integration_tokens("t-acme", "test_provider", {
+    asyncio.run(db.save_integration_tokens("t-acme", "test_provider", {
         "token": "my-secret-token",
         "refresh_token": "my-refresh-token",
         "enabled": True,
         "sync_frequency": 15
-    })
-    
+    }))
+
     # Check the raw stored data
     stored = asyncio.run(db.get_connected_integrations("t-acme"))["test_provider"]
     # 'token' and 'refresh_token' should be encrypted (Fernet format)
@@ -355,9 +364,9 @@ def test_integration_tokens_encrypted_at_rest():
     # Non-sensitive fields should be plaintext
     assert stored["enabled"] == True
     assert stored["sync_frequency"] == 15
-    
+
     # Reading via get_integration_config should return decrypted values
-    config = db.get_integration_config("t-acme", "test_provider")
+    config = asyncio.run(db.get_integration_config("t-acme", "test_provider"))
     assert config["token"] == "my-secret-token"
     assert config["refresh_token"] == "my-refresh-token"
     assert config["enabled"] == True

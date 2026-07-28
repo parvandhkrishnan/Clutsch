@@ -37,7 +37,7 @@ def get_token():
 
 def test_feed_ordering():
     """Items from /priorities/feed must be ordered by priority descending — no client-side sort needed."""
-    db.clear()
+    asyncio.run(db.clear())
     token = get_token()
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -54,7 +54,7 @@ def test_feed_ordering():
          "priorityScore": 50, "priorityTier": "medium"},
     ]
     for item in item_data:
-        db.add_item(item)
+        asyncio.run(db.add_item(item))
 
     # Fetch the feed
     resp = client.get("/priorities/feed", headers=headers)
@@ -79,14 +79,14 @@ def test_feed_ordering():
 
 def test_snooze_basic():
     """Snoozing an item removes it from the feed for the specified duration."""
-    db.clear()
+    asyncio.run(db.clear())
     token = get_token()
     headers = {"Authorization": f"Bearer {token}"}
 
     # Create an item
     item = {"id": "snooze-test-1", "tenant_id": "t-acme", "text": "Snooze me", "source": "manual",
             "metadata": {}, "timestamp": time.time()}
-    db.add_item(item)
+    asyncio.run(db.add_item(item))
 
     # Verify it's in the feed
     resp = client.get("/priorities/feed", headers=headers)
@@ -106,7 +106,7 @@ def test_snooze_basic():
 
 def test_snooze_duration_choices():
     """User can snooze for 1h, 4h, or 24h — verify the API contract."""
-    db.clear()
+    asyncio.run(db.clear())
     token = get_token()
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -115,7 +115,7 @@ def test_snooze_duration_choices():
         item_id = f"snooze-{label}"
         item = {"id": item_id, "tenant_id": "t-acme", "text": f"Snooze {label}", "source": "manual",
                 "metadata": {}, "timestamp": time.time()}
-        db.add_item(item)
+        asyncio.run(db.add_item(item))
 
         resp = client.post(f"/items/{item_id}/snooze", json={"hours": hours}, headers=headers)
         assert resp.status_code == 200, f"Snooze {label} failed: {resp.text}"
@@ -128,14 +128,14 @@ def test_snooze_duration_choices():
 
 def test_snooze_reappears():
     """Item should reappear in the feed once the snooze period expires."""
-    db.clear()
+    asyncio.run(db.clear())
     token = get_token()
     headers = {"Authorization": f"Bearer {token}"}
 
     # Create an item
     item = {"id": "snooze-reappear", "tenant_id": "t-acme", "text": "Will reappear", "source": "manual",
             "metadata": {}, "timestamp": time.time()}
-    db.add_item(item)
+    asyncio.run(db.add_item(item))
 
     # Snooze for a very short duration (1 second = 1/3600 hours)
     # The backend expects hours as int, so we test with 1 hour and verify it's gone
@@ -165,61 +165,59 @@ def test_snooze_reappears():
 # =============================================================================
 
 def test_consent_toggle_persists():
-    """Consent toggle in Settings should persist consent state via the DPDP API."""
-    db.clear()
+    """Consent toggle in Settings should persist consent state via the DPDP
+    granular per-purpose API (there is no consent_history in the current API)."""
+    asyncio.run(db.clear())
     token = get_token()
     headers = {"Authorization": f"Bearer {token}"}
 
-    # Initially, no consent recorded
+    # Initially, marketing_communications defaults to False (opt-in only)
     resp = client.get("/dpdp/consent", headers=headers)
     assert resp.status_code == 200
-    assert resp.json()["consent_history"] == []
+    assert resp.json()["consent_purposes"]["marketing_communications"]["enabled"] is False
 
-    # Grant consent
+    # Grant consent for a specific purpose
     resp = client.post("/dpdp/consent", json={
-        "version": "1.2",
-        "purpose": "AI prioritization and data aggregation"
+        "marketing_communications": True
     }, headers=headers)
     assert resp.status_code == 200, f"Consent grant failed: {resp.text}"
+    assert resp.json()["current_preferences"]["marketing_communications"] is True
 
     # Verify consent is persisted
     resp = client.get("/dpdp/consent", headers=headers)
     assert resp.status_code == 200
-    history = resp.json()["consent_history"]
-    assert len(history) == 1
-    assert history[0]["version"] == "1.2"
-    assert history[0]["purpose"] == "AI prioritization and data aggregation"
+    purposes = resp.json()["consent_purposes"]
+    assert purposes["marketing_communications"]["enabled"] is True
 
     # Simulate page reload: new request, same user
     resp = client.get("/dpdp/consent", headers=headers)
     assert resp.status_code == 200
-    assert len(resp.json()["consent_history"]) == 1, "Consent should persist after reload"
+    assert resp.json()["consent_purposes"]["marketing_communications"]["enabled"] is True, \
+        "Consent should persist after reload"
 
 
 def test_consent_withdraw():
     """Consent can be withdrawn, and the record reflects it."""
-    db.clear()
+    asyncio.run(db.clear())
     token = get_token()
     headers = {"Authorization": f"Bearer {token}"}
 
     # Grant consent first
     client.post("/dpdp/consent", json={
-        "version": "1.2",
-        "purpose": "AI prioritization and data aggregation"
+        "marketing_communications": True
     }, headers=headers)
 
     # Withdraw consent
     resp = client.post("/dpdp/consent", json={
-        "version": "withdrawn",
-        "purpose": "withdrawn"
+        "marketing_communications": False
     }, headers=headers)
     assert resp.status_code == 200, f"Consent withdraw failed: {resp.text}"
+    assert resp.json()["current_preferences"]["marketing_communications"] is False
 
     # Verify withdrawal is recorded
     resp = client.get("/dpdp/consent", headers=headers)
-    history = resp.json()["consent_history"]
-    assert len(history) == 2
-    assert history[1]["version"] == "withdrawn"
+    purposes = resp.json()["consent_purposes"]
+    assert purposes["marketing_communications"]["enabled"] is False
 
 
 # =============================================================================
@@ -228,7 +226,7 @@ def test_consent_withdraw():
 
 def test_dedup_on_sync():
     """Re-syncing the same source should not create duplicate items."""
-    db.clear()
+    asyncio.run(db.clear())
     token = get_token()
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -237,17 +235,16 @@ def test_dedup_on_sync():
     from adapters.gmail import GmailAdapter
     adapter = GmailAdapter()
 
-    import asyncio
     items1 = asyncio.run(adapter.fetch_items())
-    count_before = len(db.get_items("t-acme"))
+    count_before = len(asyncio.run(db.get_items("t-acme")))
 
     # Ingest items (simulate what the sync endpoint would do)
     for item in items1:
         # Check for duplicates by source + external_id
-        existing = [i for i in db.get_items("t-acme")
+        existing = [i for i in asyncio.run(db.get_items("t-acme"))
                     if i.get("source") == "gmail" and i.get("external_id") == item.external_id]
         if not existing:
-            db.add_item({
+            asyncio.run(db.add_item({
                 "id": str(uuid.uuid4()),
                 "tenant_id": "t-acme",
                 "external_id": item.external_id,
@@ -259,16 +256,16 @@ def test_dedup_on_sync():
                 "sender_handle": item.sender["handle"],
                 "timestamp": time.time(),
                 "metadata": item.metadata or {},
-            })
+            }))
 
-    count_after_first = len(db.get_items("t-acme"))
+    count_after_first = len(asyncio.run(db.get_items("t-acme")))
 
     # Simulate a second sync — same items should not create duplicates
     for item in items1:
-        existing = [i for i in db.get_items("t-acme")
+        existing = [i for i in asyncio.run(db.get_items("t-acme"))
                     if i.get("source") == "gmail" and i.get("external_id") == item.external_id]
         if not existing:
-            db.add_item({
+            asyncio.run(db.add_item({
                 "id": str(uuid.uuid4()),
                 "tenant_id": "t-acme",
                 "external_id": item.external_id,
@@ -280,9 +277,9 @@ def test_dedup_on_sync():
                 "sender_handle": item.sender["handle"],
                 "timestamp": time.time(),
                 "metadata": item.metadata or {},
-            })
+            }))
 
-    count_after_second = len(db.get_items("t-acme"))
+    count_after_second = len(asyncio.run(db.get_items("t-acme")))
 
     # The count should be the same after the second sync (no duplicates)
     assert count_after_second == count_after_first, \
@@ -291,36 +288,36 @@ def test_dedup_on_sync():
 
 def test_dedup_different_content_is_not_duplicate():
     """Different content from the same source should not be treated as a duplicate."""
-    db.clear()
+    asyncio.run(db.clear())
     token = get_token()
     headers = {"Authorization": f"Bearer {token}"}
 
     import uuid
     # Add first item
-    db.add_item({
+    asyncio.run(db.add_item({
         "id": str(uuid.uuid4()),
         "tenant_id": "t-acme",
         "external_id": "msg-1",
         "source": "gmail",
         "text": "First message",
         "timestamp": time.time(),
-    })
+    }))
 
     # Add second item with same source + external_id but different content
     # This should be treated as a duplicate (same external_id)
-    existing = [i for i in db.get_items("t-acme")
+    existing = [i for i in asyncio.run(db.get_items("t-acme"))
                 if i.get("source") == "gmail" and i.get("external_id") == "msg-1"]
     if not existing:
-        db.add_item({
+        asyncio.run(db.add_item({
             "id": str(uuid.uuid4()),
             "tenant_id": "t-acme",
             "external_id": "msg-1",
             "source": "gmail",
             "text": "Updated content",
             "timestamp": time.time(),
-        })
+        }))
 
-    count = len(db.get_items("t-acme"))
+    count = len(asyncio.run(db.get_items("t-acme")))
     # Should still be 1 (the second attempt was deduped)
     assert count == 1, f"Expected 1 item after dedup, got {count}"
 
@@ -331,14 +328,14 @@ def test_dedup_different_content_is_not_duplicate():
 
 def test_feed_response_has_explanations():
     """/priorities/feed should include AI explanations for each item."""
-    db.clear()
+    asyncio.run(db.clear())
     token = get_token()
     headers = {"Authorization": f"Bearer {token}"}
 
     # Add an item
     item = {"id": "explain-test", "tenant_id": "t-acme", "text": "Test explanation",
             "source": "manual", "metadata": {}, "timestamp": time.time()}
-    db.add_item(item)
+    asyncio.run(db.add_item(item))
 
     resp = client.get("/priorities/feed", headers=headers)
     assert resp.status_code == 200
@@ -359,13 +356,13 @@ def test_feed_response_has_explanations():
 
 def test_feed_does_not_include_archived():
     """Archived items should not appear in the priority feed."""
-    db.clear()
+    asyncio.run(db.clear())
     token = get_token()
     headers = {"Authorization": f"Bearer {token}"}
 
     item = {"id": "archived-test", "tenant_id": "t-acme", "text": "Will be archived",
             "source": "manual", "metadata": {}, "timestamp": time.time()}
-    db.add_item(item)
+    asyncio.run(db.add_item(item))
 
     # Archive it
     resp = client.post("/items/archived-test/archive", headers=headers)

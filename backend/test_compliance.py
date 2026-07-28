@@ -348,7 +348,9 @@ class TestErasureCascade:
         # validates the item exists first. Create a second real item, then
         # delegate it for real instead of bypassing the check.
         asyncio.run(db.add_item({"id": "item-delegated", "tenant_id": tenant_id, "text": "test", "source": "manual"}))
-        asyncio.run(db.delegate_item("item-delegated", tenant_id, user_id, "admin", "test note"))
+        # assigned_by is a FK to users.id, not a username — "u-1" is the
+        # real seeded admin user's id.
+        asyncio.run(db.delegate_item("item-delegated", tenant_id, user_id, "u-1", "test note"))
 
         # 7. Failed login attempts
         asyncio.run(db.record_failed_login(user_id))
