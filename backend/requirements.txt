@@ -8,6 +8,10 @@ fastapi>=0.110.0
 uvicorn[standard]>=0.27.0
 gunicorn>=21.2.0
 pydantic>=2.5.0
+# Not directly imported anywhere by name — FastAPI needs it implicitly for
+# Form(...)/OAuth2PasswordRequestForm (used by /auth/login). Missing this
+# broke every test at collection time (confirmed by an actual CI run).
+python-multipart>=0.0.9
 
 sqlalchemy>=2.0.25
 asyncpg>=0.29.0
