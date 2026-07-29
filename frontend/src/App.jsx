@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Sidebar from './components/Sidebar';
 import CookieConsent from './components/CookieConsent';
 import ErrorBanner from './components/ErrorBanner';
+import GroundField from './components/GroundField';
 import Dashboard from './pages/Dashboard';
 import Integrations from './pages/Integrations';
 import Settings from './pages/Settings';
@@ -36,6 +37,9 @@ function App() {
     // public routes too, and keeping them separate stops a login re-rendering
     // the tree for theme reasons.
     <PreferencesProvider>
+      {/* Outside Router: must never unmount on navigation, and must stay a
+          direct descendant of body so glass can sample it. */}
+      <GroundField />
       <AuthProvider>
         <Router>
           <ErrorBanner />

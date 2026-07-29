@@ -44,11 +44,21 @@
         }
       })();
     </script>
+    <!--
+      One origin, one request. Satoshi and the Fontshare origin are gone:
+      Satoshi was being downloaded but never referenced in any CSS rule, and
+      Bricolage Grotesque replaces it as the display face. Net effect is one
+      fewer origin and no extra requests.
+
+      Bricolage is variable (optical size + weight), so the single file covers
+      every display size we use.
+    -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preconnect" href="https://api.fontshare.com" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" />
-    <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700,500,600,400&display=swap" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    />
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   </head>
   <body class="grain-overlay">

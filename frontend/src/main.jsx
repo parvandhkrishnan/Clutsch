@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client'
 // named layer, so source order stops deciding precedence.
 import './design-system-v2.css'
 import './styles/tokens.css'
+import './styles/material.css'
 import './index.css'
 import App from './App.jsx'
 

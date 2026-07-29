@@ -1,0 +1,150 @@
+/* ============================================================
+   Clutsch — Vivid Glass material
+   ============================================================
+   The ground field and grain. Glass surfaces land here in the
+   next step; this file is the "physical layer" of the system.
+   ============================================================ */
+
+@layer base {
+
+  /* ---------- TYPOGRAPHY ---------------------------------- */
+  /*
+    Bricolage Grotesque is deliberately rationed. It has real character —
+    that is why it was chosen — but character fights a dense data UI. It gets
+    the display sizes only; everything structural stays on Inter, and all
+    numerics go to JetBrains Mono.
+
+    The legacy sheet applies --font-display to h1–h6 indiscriminately, which
+    would push Bricolage into card titles and table headers. h3–h6 are pulled
+    back to Inter here.
+  */
+  :root {
+    --font-display: 'Bricolage Grotesque', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  h1, h2,
+  .text-display-xl,
+  .kpi-value,
+  .amount {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    letter-spacing: -0.02em;
+  }
+
+  /* Dense UI: card titles, table headers, panel headings. Inter, not Bricolage. */
+  h3, h4, h5, h6 {
+    font-family: var(--font-body);
+    letter-spacing: -0.01em;
+  }
+
+  /* Numerics are mono everywhere they line up in a column or update live. */
+  .item-score-badge,
+  .weight-value,
+  .kpi-value,
+  .usage-stats,
+  .log-timestamp,
+  .log-ip,
+  .col-date,
+  .price,
+  .amount,
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .item-score-badge,
+  .weight-value,
+  .usage-stats,
+  .log-timestamp,
+  .col-date {
+    font-family: var(--font-mono);
+  }
+}
+
+@layer components {
+
+  /* ---------- GROUND -------------------------------------- */
+  /*
+    The field sits fixed behind everything at z-index -1.
+
+    Fixed is load-bearing, not cosmetic. backdrop-filter samples whatever is
+    painted below it *within its backdrop root* — and with no filter/transform/
+    opacity/containment ancestors, that root is the document. A fixed ground is
+    therefore sampled correctly by glass anywhere in the tree: inside a scrolled
+    region, inside a sticky panel, inside a modal.
+
+    Put the ground inside a scrolling container instead and two things break:
+    the blur has to re-sample a moving backdrop every scroll frame, and the
+    field runs out at the bottom of long pages.
+
+    ⚠ Do NOT add `transform`, `filter`, `opacity < 1`, `perspective`, `mask`,
+    or `contain: paint` to .app-container, .main-content, or any wrapper
+    between here and a glass surface. Each of those creates a new backdrop
+    root, which makes every glass descendant sample an empty subtree and
+    render as a flat grey box. It would also break fixed modals and toasts.
+  */
+
+  html {
+    /* Base colour lives on the root so there is never a white flash before
+       the ground element paints. */
+    background: var(--field-base);
+  }
+
+  body {
+    /* Nothing may paint over the field. */
+    background: transparent;
+  }
+
+  .ground {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-color: var(--field-base);
+    /* Three soft blooms as one element with three background layers, rather
+       than three child divs — one composited layer instead of three, and the
+       ground is static (pointer-reactive motion only), so there is nothing to
+       animate independently. */
+    background-image:
+      radial-gradient(60vmax 60vmax at 12% 8%,  var(--field-bloom-a), transparent 68%),
+      radial-gradient(55vmax 55vmax at 88% 22%, var(--field-bloom-b), transparent 66%),
+      radial-gradient(70vmax 70vmax at 52% 96%, var(--field-bloom-c), transparent 70%);
+    background-repeat: no-repeat;
+  }
+
+  /* ---------- GRAIN --------------------------------------- */
+  /*
+    Sits above the field and below content, as a child of .ground so paint
+    order is guaranteed rather than depending on z-index ties.
+
+    Being *below* content is deliberate: glass then samples the grain through
+    its blur, which is what makes a surface read as frosted rather than as a
+    translucent rectangle. Putting grain on top of everything would instead
+    force a full-page blended composite on every frame and glass wouldn't
+    pick it up anyway.
+
+    A 128×128 feTurbulence tile with stitchTiles='stitch' rasterises once and
+    repeats seamlessly. Running feTurbulence across the whole viewport would
+    be genuinely slow to rasterise and would redo it on every resize.
+  */
+  .ground::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: var(--grain-alpha);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='128' height='128' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+  }
+
+  /* The app shell must not paint its own background over the field. */
+  .app-container {
+    background: transparent;
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    /* Flatten to a single solid tone: the blooms exist to give glass
+       something to refract, and there is no glass in this mode. */
+    .ground { background-image: none; }
+    .ground::after { display: none; }
+  }
+}

@@ -82,7 +82,9 @@
      before the glass work, because in the new material system those names mean
      translucent surfaces, not the opaque colours they aliased here. */
 
-  --font-display: 'Satoshi', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  /* Overridden in @layer base (styles/material.css); kept in sync so this
+     doesn't sit here naming a font the app no longer loads. */
+  --font-display: 'Bricolage Grotesque', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-body:    'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono:    'JetBrains Mono', ui-monospace, monospace;
   --font-heading-weight: 700;
