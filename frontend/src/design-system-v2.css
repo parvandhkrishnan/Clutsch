@@ -1,7 +1,35 @@
+/* ============================================================
+   CASCADE LAYER ORDER — declared here because this file is the
+   first stylesheet imported by main.jsx, and @layer order must
+   be established before any layered rule is parsed.
+
+   Earlier layer = lower priority. So `legacy` (this file, in its
+   entirety) loses to everything the glass revamp adds, which is
+   how the new material can replace these rules without a single
+   !important and without reordering 855 lines.
+
+     legacy      this file — the flat monochrome system
+     tokens      new primitive + semantic ramps, [data-theme] blocks
+     base        resets, focus rings, a11y fallbacks
+     components  .glass, .surface, .btn-liquid, ground, grain
+     pages       per-page structural archetypes
+     utilities   last-resort single-purpose helpers
+
+   Note: unlayered styles beat ALL layers, so anything left
+   unlayered is effectively an override of last resort.
+   ============================================================ */
+@layer legacy, tokens, base, components, pages, utilities;
+
+@layer legacy {
+
 /* Hallmark · genre: modern-minimal · macrostructure: Bento Grid (app shell) / Marquee Hero (marketing)
  * theme: custom (vibe: "calm, warm off-white, monochrome ink, one quiet signal color for priority")
  * nav: side-rail (app) / N5 floating pill (marketing) · footer: none (app) / Ft2 inline (marketing)
  * pre-emit critique: P4 H4 E4 S4 R5 V4
+ *
+ * SUPERSEDED by the Vivid Glass revamp. Retained inside @layer legacy so the
+ * app keeps rendering while pages migrate one at a time; deleted in the final
+ * cleanup commit once no page depends on it.
  */
 /* ============================================================
    Clutsch Design Tokens
@@ -46,36 +74,17 @@
   --success: var(--priority-low);
   --warning: var(--priority-medium);
   --error:   var(--priority-urgent);
-  /* back-compat aliases for any stray var(--gauge-*) usage outside this file */
-  --gauge-urgent: var(--priority-urgent);
-  --gauge-high: var(--priority-high);
-  --gauge-medium: var(--priority-medium);
-  --gauge-low: var(--priority-low);
-
-  /* Back-compat aliases — old token names that legitimately worked pre-
-     redesign and are still referenced by inline styles on pages not yet
-     touched (Dashboard, Admin, Billing, Settings, Integration modals).
-     Remove each alias as its page gets its Phase 4 pass and its inline
-     styles move to the tokens above directly. Do NOT add aliases for
-     tokens that never existed (--primary-blue, --bg-surface, --bg-subtle,
-     --border, --radius-md) — those are the Phase-1-audited "phantom design
-     system" on Login/LandingPage/Onboarding and get fixed by rewriting
-     those pages in Phase 4, not by inventing values for invented names. */
-  --bg-base: var(--color-paper);
-  --bg-elevated: var(--color-paper-2);
-  --text-primary: var(--color-ink);
-  --text-secondary: var(--color-ink-2);
-  --text-muted: var(--color-ink-3);
-  --accent: var(--color-accent);
-  --accent-hover: var(--color-accent-hover);
-  --accent-glow: var(--color-accent-soft);
-  --glass-border: var(--color-rule-strong);
-  --glass-fill: var(--color-paper-3);
+  /* The Phase-3 back-compat alias block (--bg-base, --text-primary, --accent,
+     --glass-*, --gauge-* …) has been deleted. Every one of those names was
+     verified to have zero remaining references in both CSS and JSX after the
+     Phase 4 page passes migrated them onto the --color-*/--priority-* tokens
+     above. Two of them (--glass-fill, --glass-border) additionally had to go
+     before the glass work, because in the new material system those names mean
+     translucent surfaces, not the opaque colours they aliased here. */
 
   --font-display: 'Satoshi', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-body:    'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono:    'JetBrains Mono', ui-monospace, monospace;
-  --font-family: var(--font-body); /* back-compat alias for any stray var(--font-family) usage */
   --font-heading-weight: 700;
   --font-body-weight: 400;
   --font-numeric-weight: 500;
@@ -872,3 +881,5 @@ a:hover { color: var(--color-accent-hover); }
 .text-caption { font-size: 0.8rem; margin: 0; }
 .text-label { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin: 0; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+} /* end @layer legacy */

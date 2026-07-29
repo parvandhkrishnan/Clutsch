@@ -567,6 +567,11 @@ const Dashboard = () => {
             backgroundColor: 'var(--color-paper-2)',
             textColor: 'var(--color-ink)',
             arrowColor: 'var(--color-paper-2)',
+            // Joyride defaults to 100, which sits below --z-sticky (200) —
+            // the sticky filter bar and bulk-action bar would render on top
+            // of the tour spotlight. 300 keeps it above sticky chrome but
+            // below modals (400) and toasts (500).
+            zIndex: 300,
           }
         }}
       />

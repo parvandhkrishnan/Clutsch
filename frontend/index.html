@@ -9,6 +9,45 @@
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta http-equiv="X-Frame-Options" content="DENY" />
     <title>Clutsch — Unified Priority Dashboard</title>
+
+    <!--
+      Theme bootstrap. MUST stay here, blocking, above the stylesheet links.
+
+      React cannot do this job: even a lazy useState initialiser runs after the
+      browser has already painted the document background, so resolving the
+      theme in JS produces a visible flash of the wrong theme on every reload.
+      This runs before first paint and stamps the resolved theme on <html>;
+      PreferencesContext then reads it back off the DOM rather than re-deciding.
+
+      Kept dependency-free and wrapped in try/catch so that storage being
+      unavailable (private mode, blocked cookies) degrades to the light theme
+      instead of throwing before the app boots.
+    -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('clutsch.prefs');
+          var prefs = stored ? JSON.parse(stored) : {};
+          // Default is 'light', not 'system', until the dark theme actually
+          // exists (Step 1). Defaulting to 'system' now would give a dark-OS
+          // user dark native scrollbars and form controls on a light page.
+          // Flip this to 'system' in the same commit that lands dark tokens.
+          var pref = prefs.theme || 'light';
+          var dark =
+            pref === 'dark' ||
+            (pref === 'system' &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var root = document.documentElement;
+          root.dataset.theme = dark ? 'dark' : 'light';
+          root.style.colorScheme = dark ? 'dark' : 'light';
+          if (prefs.reduceTransparency) root.dataset.transparency = 'reduce';
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.content = dark ? '#0A1020' : '#EDF2FA';
+        } catch (e) {
+          document.documentElement.dataset.theme = 'light';
+        }
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://api.fontshare.com" />
