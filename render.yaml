@@ -20,6 +20,12 @@ services:
           property: connectionString
       - key: JWT_SECRET_KEY
         generateValue: true
+      # gunicorn.conf.py defaults to 2×CPU-count+1 workers, which on
+      # Render's free tier (512MB total) can try to start several full
+      # Python processes at once and hit the memory cap during startup.
+      # One worker is enough for review/demo traffic.
+      - key: CLUTSCH_WORKERS
+        value: "1"
       # ENCRYPTION_KEY must be a real Fernet key (32 random bytes,
       # URL-safe base64), not an arbitrary string — Render's generateValue
       # doesn't produce this format, so it's set manually. See deployment
