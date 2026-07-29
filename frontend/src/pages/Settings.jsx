@@ -264,7 +264,7 @@ const Settings = () => {
                   ))
                 )
               ) : (
-                <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '40px' }}>
+                <p style={{ color: 'var(--color-ink-3)', textAlign: 'center', padding: '40px' }}>
                   No manual priorities set yet.
                 </p>
               )}
@@ -293,7 +293,7 @@ const Settings = () => {
                       />
                       <span className={`slider round ${consentLoadingPurpose === purposeId ? 'opacity-50' : ''}`}></span>
                     </label>
-                    {consentLoadingPurpose === purposeId && <Loader2 size={16} className="spin ml-2" style={{ marginLeft: '8px', color: 'var(--primary-blue)' }} />}
+                    {consentLoadingPurpose === purposeId && <Loader2 size={16} className="spin ml-2" style={{ marginLeft: '8px', color: 'var(--color-accent)' }} />}
                   </div>
                 ))}
                 {consentStatus && (
@@ -341,12 +341,12 @@ const Settings = () => {
             </div>
           </section>
 
-          <section id="danger-zone" className="card" style={{ marginTop: '32px', borderColor: '#fee2e2' }}>
-            <h2 style={{ color: '#ef4444' }}>Danger Zone</h2>
+          <section id="danger-zone" className="card" style={{ marginTop: '32px', borderColor: 'var(--error)' }}>
+            <h2 style={{ color: 'var(--error)' }}>Danger Zone</h2>
             <p className="section-desc">Once you delete your account, there is no going back. Please be certain.</p>
-            <button 
-              className="btn btn-secondary" 
-              style={{ color: '#ef4444', borderColor: '#fecaca' }}
+            <button
+              className="btn btn-secondary"
+              style={{ color: 'var(--error)', borderColor: 'var(--error)' }}
               onClick={handleDeleteAccount}
             >
               <Trash2 size={18} />
@@ -367,7 +367,7 @@ const Settings = () => {
               <div className="form-group">
                 <label>Platform</label>
                 <select 
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}
+                  className="glass-select full-width"
                   value={newContact.platform}
                   onChange={e => setNewContact({...newContact, platform: e.target.value})}
                 >
@@ -389,7 +389,7 @@ const Settings = () => {
               <div className="form-group">
                 <label>Priority Level</label>
                 <select 
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}
+                  className="glass-select full-width"
                   value={newContact.priority}
                   onChange={e => setNewContact({...newContact, priority: e.target.value})}
                 >
@@ -463,7 +463,7 @@ const Settings = () => {
               <div className="form-group">
                 <label>Subject</label>
                 <select 
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}
+                  className="glass-select full-width"
                   value={grievance.subject}
                   onChange={e => setGrievance({...grievance, subject: e.target.value})}
                 >
@@ -479,7 +479,8 @@ const Settings = () => {
                 <label>Description of Concern</label>
                 <textarea 
                   rows="4"
-                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--glass-border)', resize: 'vertical' }}
+                  className="glass-input"
+                  style={{ resize: 'vertical' }}
                   value={grievance.description}
                   onChange={e => setGrievance({...grievance, description: e.target.value})}
                   placeholder="Please provide details about your concern..."
