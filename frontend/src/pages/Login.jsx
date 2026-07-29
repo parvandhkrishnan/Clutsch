@@ -101,8 +101,8 @@ const Login = () => {
         <div className="auth-form">
           {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-md)', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '18px' }}>C</div>
-            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '20px', color: 'var(--text-primary)' }}>Clutsch</span>
+            <div style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-input)', background: 'var(--color-accent)', color: 'var(--color-accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '18px' }}>C</div>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '20px', color: 'var(--color-ink)' }}>Clutsch</span>
           </div>
 
           {/* Heading */}
@@ -110,13 +110,13 @@ const Login = () => {
             <h1 style={{ fontSize: '28px', marginBottom: '8px' }}>
               {mode === 'signin' ? 'Welcome back' : 'Create your account'}
             </h1>
-            <p className="text-body" style={{ color: 'var(--text-secondary)' }}>
+            <p className="text-body" style={{ color: 'var(--color-ink-2)' }}>
               {mode === 'signin' ? 'Sign in to your Clutsch workspace.' : 'Start your 14-day free trial. No credit card needed.'}
             </p>
           </div>
 
           {error && (
-            <div style={{ padding: '12px 16px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-md)', color: 'var(--danger)', fontSize: '14px' }}>
+            <div style={{ padding: '12px 16px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-input)', color: 'var(--error)', fontSize: '14px' }}>
               {error}
             </div>
           )}
@@ -124,11 +124,11 @@ const Login = () => {
           {mode === 'signin' ? (
             <form onSubmit={handleSignIn} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label className="text-label" style={{ color: 'var(--text-primary)' }}>Username</label>
+                <label className="text-label" style={{ color: 'var(--color-ink)' }}>Username</label>
                 <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required placeholder="e.g. john" />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label className="text-label" style={{ color: 'var(--text-primary)' }}>Password</label>
+                <label className="text-label" style={{ color: 'var(--color-ink)' }}>Password</label>
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" />
               </div>
               <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%', justifyContent: 'center' }} disabled={isSubmitting}>
@@ -138,19 +138,19 @@ const Login = () => {
           ) : (
             <form onSubmit={handleSignUp} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label className="text-label" style={{ color: 'var(--text-primary)' }}>Full Name</label>
+                <label className="text-label" style={{ color: 'var(--color-ink)' }}>Full Name</label>
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)} required placeholder="e.g. John Doe" />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label className="text-label" style={{ color: 'var(--text-primary)' }}>Email</label>
+                <label className="text-label" style={{ color: 'var(--color-ink)' }}>Email</label>
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="john@company.com" />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label className="text-label" style={{ color: 'var(--text-primary)' }}>Username</label>
+                <label className="text-label" style={{ color: 'var(--color-ink)' }}>Username</label>
                 <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required placeholder="e.g. john" />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label className="text-label" style={{ color: 'var(--text-primary)' }}>Password</label>
+                <label className="text-label" style={{ color: 'var(--color-ink)' }}>Password</label>
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="At least 8 characters" />
               </div>
               <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%', justifyContent: 'center' }} disabled={isSubmitting}>
@@ -162,11 +162,11 @@ const Login = () => {
           {/* Social login buttons */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
-              <span className="text-caption" style={{ color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
+              <div style={{ flex: 1, height: '1px', background: 'var(--color-rule)' }} />
+              <span className="text-caption" style={{ color: 'var(--color-ink-3)', whiteSpace: 'nowrap' }}>
                 {mode === 'signin' ? 'or continue with' : 'or sign up with'}
               </span>
-              <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+              <div style={{ flex: 1, height: '1px', background: 'var(--color-rule)' }} />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -175,8 +175,8 @@ const Login = () => {
                 disabled={isSubmitting}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                  padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-strong)',
-                  background: 'var(--bg-surface)', color: 'var(--text-primary)', cursor: 'pointer',
+                  padding: '10px', borderRadius: 'var(--radius-input)', border: '1px solid var(--color-rule-strong)',
+                  background: 'var(--color-paper-2)', color: 'var(--color-ink)', cursor: 'pointer',
                   fontSize: '14px', fontWeight: 500, transition: 'all 150ms ease-out', fontFamily: 'var(--font-body)',
                   opacity: isSubmitting ? 0.6 : 1,
                 }}
@@ -189,8 +189,8 @@ const Login = () => {
                 disabled={isSubmitting}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                  padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-strong)',
-                  background: 'var(--bg-surface)', color: 'var(--text-primary)', cursor: 'pointer',
+                  padding: '10px', borderRadius: 'var(--radius-input)', border: '1px solid var(--color-rule-strong)',
+                  background: 'var(--color-paper-2)', color: 'var(--color-ink)', cursor: 'pointer',
                   fontSize: '14px', fontWeight: 500, transition: 'all 150ms ease-out', fontFamily: 'var(--font-body)',
                   opacity: isSubmitting ? 0.6 : 1,
                 }}
@@ -202,17 +202,17 @@ const Login = () => {
           </div>
 
           <div style={{ textAlign: 'center' }}>
-            <p className="text-body" style={{ color: 'var(--text-tertiary)', fontSize: '14px' }}>
+            <p className="text-body" style={{ color: 'var(--color-ink-3)', fontSize: '14px' }}>
               {mode === 'signin' ? (
-                <>Don't have an account? <button onClick={toggleMode} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '14px', fontWeight: 500, padding: 0 }}>Sign up</button></>
+                <>Don't have an account? <button onClick={toggleMode} style={{ background: 'none', border: 'none', color: 'var(--color-accent)', cursor: 'pointer', fontSize: '14px', fontWeight: 500, padding: 0 }}>Sign up</button></>
               ) : (
-                <>Already have an account? <button onClick={toggleMode} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '14px', fontWeight: 500, padding: 0 }}>Sign in</button></>
+                <>Already have an account? <button onClick={toggleMode} style={{ background: 'none', border: 'none', color: 'var(--color-accent)', cursor: 'pointer', fontSize: '14px', fontWeight: 500, padding: 0 }}>Sign in</button></>
               )}
             </p>
           </div>
 
-          <div style={{ textAlign: 'center', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
-            <p className="text-caption" style={{ color: 'var(--text-tertiary)' }}>Demo: admin / admin123</p>
+          <div style={{ textAlign: 'center', paddingTop: '16px', borderTop: '1px solid var(--color-rule)' }}>
+            <p className="text-caption" style={{ color: 'var(--color-ink-3)' }}>Demo: admin / admin123</p>
           </div>
         </div>
       </div>
@@ -220,7 +220,7 @@ const Login = () => {
       <div className="auth-hero-side">
         {mode === 'signin' ? (
           <div style={{ maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '24px', textAlign: 'center' }}>
-            <div style={{ width: '72px', height: '72px', borderRadius: 'var(--radius-lg)', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+            <div style={{ width: '72px', height: '72px', borderRadius: 'var(--radius-panel)', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
               <Zap size={36} style={{ color: '#fff' }} />
             </div>
             <h1 style={{ color: '#fff', fontSize: '36px' }}>Clear the Noise.<br />Focus on What Matters.</h1>
@@ -231,7 +231,7 @@ const Login = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', marginTop: '8px' }}>
               {['Connect Gmail, Slack, Jira & more', 'AI-powered urgency scoring', 'Enterprise-grade privacy'].map((item, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'rgba(255,255,255,0.9)', fontSize: '14px' }}>
-                  <div style={{ width: '20px', height: '20px', borderRadius: 'var(--radius-full)', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: '20px', height: '20px', borderRadius: 'var(--radius-pill)', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <ArrowRight size={12} style={{ color: '#fff' }} />
                   </div>
                   {item}
@@ -241,7 +241,7 @@ const Login = () => {
           </div>
         ) : (
           <div style={{ maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '24px', textAlign: 'center' }}>
-            <div style={{ width: '72px', height: '72px', borderRadius: 'var(--radius-lg)', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+            <div style={{ width: '72px', height: '72px', borderRadius: 'var(--radius-panel)', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
               <UserPlus size={36} style={{ color: '#fff' }} />
             </div>
             <h1 style={{ color: '#fff', fontSize: '36px' }}>Start Your Free Trial.<br />No Credit Card Needed.</h1>
@@ -252,7 +252,7 @@ const Login = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', marginTop: '8px' }}>
               {['14-day free trial, full access to Pro', 'Connect up to 6 integrations', 'Cancel anytime, no questions asked'].map((item, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'rgba(255,255,255,0.9)', fontSize: '14px' }}>
-                  <div style={{ width: '20px', height: '20px', borderRadius: 'var(--radius-full)', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: '20px', height: '20px', borderRadius: 'var(--radius-pill)', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <CheckCircle2 size={12} style={{ color: '#fff' }} />
                   </div>
                   {item}
