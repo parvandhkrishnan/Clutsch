@@ -112,7 +112,7 @@ const UserDirectory = () => {
             ))}
             {users.length === 0 && !error && (
               <tr>
-                <td colSpan="5" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                <td colSpan="5" style={{ textAlign: 'center', padding: '40px', color: 'var(--color-ink-3)' }}>
                   No team members found.
                 </td>
               </tr>
@@ -274,7 +274,7 @@ const PrioritizationRules = () => {
               </div>
             ))}
             {rules.length === 0 && !error && (
-              <p style={{ color: 'var(--text-muted)', padding: '20px 0' }}>No prioritization rules yet. Add one to get started.</p>
+              <p style={{ color: 'var(--color-ink-3)', padding: '20px 0' }}>No prioritization rules yet. Add one to get started.</p>
             )}
           </div>
         </div>
@@ -381,9 +381,9 @@ const SSOConfig = () => {
       </div>
 
       <div className="card glass-effect sso-container">
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '60px 24px', gap: '16px', color: 'var(--text-muted)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '60px 24px', gap: '16px', color: 'var(--color-ink-3)' }}>
           <Lock size={40} />
-          <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>Not Yet Implemented</h3>
+          <h3 style={{ margin: 0, color: 'var(--color-ink)' }}>Not Yet Implemented</h3>
           <p style={{ maxWidth: '480px' }}>
             SSO / SAML configuration isn't wired up on the backend yet — there is no way to save,
             test, or enforce an identity provider from Clutsch today. This tab is a placeholder for
@@ -446,7 +446,7 @@ const AuditLogs = () => {
         <div className="card glass-effect directory-container">
           {stats && (
             <div className="table-controls">
-              <span style={{ color: 'var(--text-muted)' }}>{stats.total_entries} total entries</span>
+              <span style={{ color: 'var(--color-ink-3)' }}>{stats.total_entries} total entries</span>
             </div>
           )}
 
@@ -476,7 +476,7 @@ const AuditLogs = () => {
               ))}
               {entries.length === 0 && (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: 'var(--color-ink-3)' }}>
                     No audit entries recorded yet.
                   </td>
                 </tr>
@@ -500,9 +500,9 @@ const OrgIntegrations = () => {
       </div>
 
       <div className="integrations-list-container admin-integrations card glass-effect">
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '60px 24px', gap: '16px', color: 'var(--text-muted)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '60px 24px', gap: '16px', color: 'var(--color-ink-3)' }}>
           <Globe size={40} />
-          <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>Not Yet Implemented</h3>
+          <h3 style={{ margin: 0, color: 'var(--color-ink)' }}>Not Yet Implemented</h3>
           <p style={{ maxWidth: '520px' }}>
             There is no organization-level integration management backend yet. Members can connect
             their own accounts (Gmail, Slack, WhatsApp, Outlook, Teams, Jira) from the Integrations
@@ -882,7 +882,7 @@ const CustomConnectors = () => {
             ))}
             {connectors.length === 0 && (
               <tr>
-                <td colSpan="5" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                <td colSpan="5" style={{ textAlign: 'center', padding: '40px', color: 'var(--color-ink-3)' }}>
                   No custom connectors registered yet.
                 </td>
               </tr>
@@ -944,10 +944,10 @@ const CustomConnectors = () => {
                   <h3 style={{ margin: 0 }}>Data Mapping Normalizer</h3>
                 </div>
                 <p className="card-desc">Map JSON response keys to Clutsch schema fields.</p>
-                <div className="mapping-grid" style={{ background: 'rgba(0,0,0,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                <div className="mapping-grid">
                   {Object.entries(formData.mapping).map(([target, source]) => (
                     <div key={target} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                      <div style={{ flex: 1, fontWeight: 600, color: 'var(--text-muted)' }}>{target.toUpperCase()}</div>
+                      <div style={{ flex: 1, fontWeight: 600, color: 'var(--color-ink-3)' }}>{target.toUpperCase()}</div>
                       <ArrowRight size={16} />
                       <input 
                         type="text" className="glass-input" style={{ flex: 2 }}
