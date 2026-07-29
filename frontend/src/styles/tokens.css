@@ -1,0 +1,207 @@
+/* ============================================================
+   Clutsch — Vivid Glass token system
+   ============================================================
+   Canonical source: /design.md at the repo root.
+
+   Three layers, and only the middle one is theme-aware:
+
+     PRIMITIVES   raw ramps, theme-invariant, never referenced by components
+     SEMANTIC     redefined under [data-theme]; what components actually use
+     COMPAT       the old --color-* names, re-pointed at semantic tokens
+
+   The compat block is what makes this migration affordable: the previous
+   system was disciplined about tokens, so re-pointing ~12 names flips every
+   page, including inline styles, between themes with no JSX edits.
+
+   Why not light-dark()? It only substitutes <color> values. Glass needs the
+   gradient stops, the number of box-shadow layers, the blur radius and the
+   saturation amount to change between themes. light-dark() covers maybe 40%
+   of that and forces a hybrid, which is worse than either pure approach.
+   ============================================================ */
+
+@layer tokens {
+
+  /* ---------- PRIMITIVES ---------------------------------- */
+  :root {
+    /* Cool ramp. Hue travel runs cyan 195° → blue 232° → deep blue 265°.
+       It deliberately stops at 265: violet/purple begins around 300° and is
+       banned, so the field gets its richness from hue travel and specular
+       highlights rather than from pushing further round the wheel. */
+    --cyan-400:  oklch(78% 0.130 195);
+    --cyan-500:  oklch(70% 0.145 200);
+    --blue-400:  oklch(74% 0.140 232);
+    --blue-500:  oklch(62% 0.170 240);
+    --blue-600:  oklch(52% 0.180 248);
+    --deep-500:  oklch(56% 0.165 265);
+    --deep-600:  oklch(45% 0.160 265);
+
+    /* Priority hues. Semantic red → green is preserved exactly; only the
+       rendering changes. Split into -glow (fills, orbs, strokes; never text)
+       and per-theme -text below, because a hue bright enough to glow is never
+       also legible as small text. */
+    --red-glow:    oklch(65% 0.220 25);
+    --orange-glow: oklch(74% 0.175 55);
+    --amber-glow:  oklch(84% 0.160 88);
+    --green-glow:  oklch(72% 0.150 155);
+  }
+
+  /* ---------- SEMANTIC · LIGHT ---------------------------- */
+  :root,
+  :root[data-theme="light"] {
+    color-scheme: light;
+
+    /* Ground. Lightness is deliberately confined to L 88–96% and chroma to
+       ≤0.07. Because blur preserves mean luminance and reduces variance, a
+       narrow band means the composite luminance behind any glass surface is
+       bounded, so worst-case contrast is computable once instead of being
+       audited per page. */
+    --field-base:  oklch(96% 0.012 235);
+    --field-bloom-a: oklch(90% 0.070 200);
+    --field-bloom-b: oklch(91% 0.060 245);
+    --field-bloom-c: oklch(93% 0.045 265);
+    --grain-alpha: 0.030;
+
+    /* Opaque content plates. Text lives here, never directly on glass. */
+    --surface-0: oklch(97.5% 0.008 240);
+    --surface-1: oklch(100%  0     0);
+    --surface-2: oklch(95%   0.012 240);
+    --surface-3: oklch(92%   0.016 240);
+
+    --text-1: oklch(24% 0.022 255);
+    --text-2: oklch(47% 0.020 250);
+    --text-3: oklch(62% 0.018 248);
+
+    --border-1: oklch(90% 0.014 240);
+    --border-2: oklch(83% 0.018 240);
+
+    --brand-500: var(--blue-600);
+    --brand-600: oklch(45% 0.180 250);
+    --brand-100: oklch(94% 0.035 240);
+
+    /* Glass polarity. Light glass is FAR more opaque than dark glass —
+       blur does not darken a bright ground, so on light the fill has to do
+       the legibility work itself. Porting the dark alphas to light ships
+       failing contrast; this is the single easiest mistake to make here. */
+    --glass-tint-hi:  rgb(255 255 255 / 0.72);
+    --glass-tint-lo:  oklch(62% 0.13 240 / 0.10);
+    --glass-base:     rgb(255 255 255 / 0.55);
+    --glass-border:   rgb(255 255 255 / 0.70);
+    --glass-inner:    oklch(60% 0.10 245 / 0.12);
+    --glass-specular: rgb(255 255 255 / 0.90);
+    --glass-shade:    oklch(45% 0.06 250 / 0.10);
+    --glass-drop:     0 12px 40px oklch(45% 0.08 250 / 0.14);
+    --glass-blur:     20px;
+    --glass-sat:      140%;
+    --glass-contrast: 1;
+
+    /* Focus ring: two tones so it survives any part of a luminous field.
+       A single colour cannot clear 3:1 against both the bright and dark
+       regions of the ground. */
+    --focus-inner: oklch(22% 0.03 255);
+    --focus-outer: rgb(255 255 255 / 0.92);
+
+    --priority-urgent-text: oklch(48% 0.200 25);
+    --priority-high-text:   oklch(51% 0.155 55);
+    --priority-medium-text: oklch(50% 0.115 88);
+    --priority-low-text:    oklch(47% 0.130 155);
+
+    --shadow-whisper: 0 1px 2px oklch(45% 0.05 250 / 0.08);
+    --shadow-raised:  0 4px 16px oklch(45% 0.06 250 / 0.10);
+
+    --scrim: oklch(30% 0.04 255 / 0.32);
+    --neutral-tile: var(--surface-2);
+  }
+
+  /* ---------- SEMANTIC · DARK ----------------------------- */
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+
+    /* Same discipline as light: L confined to 12–26%, chroma ≤0.09. */
+    --field-base:  oklch(14% 0.030 260);
+    --field-bloom-a: oklch(26% 0.090 200);
+    --field-bloom-b: oklch(24% 0.085 240);
+    --field-bloom-c: oklch(21% 0.075 265);
+    --grain-alpha: 0.045;
+
+    --surface-0: oklch(15% 0.025 258);
+    --surface-1: oklch(19% 0.026 256);
+    --surface-2: oklch(24% 0.028 254);
+    --surface-3: oklch(29% 0.030 252);
+
+    --text-1: oklch(96% 0.006 250);
+    --text-2: oklch(78% 0.012 250);
+    --text-3: oklch(62% 0.014 250);
+
+    --border-1: oklch(30% 0.028 252);
+    --border-2: oklch(39% 0.032 250);
+
+    --brand-500: var(--blue-400);
+    --brand-600: var(--cyan-400);
+    --brand-100: oklch(30% 0.060 240);
+
+    --glass-tint-hi:  rgb(255 255 255 / 0.30);
+    --glass-tint-lo:  rgb(255 255 255 / 0.08);
+    --glass-base:     rgb(255 255 255 / 0.12);
+    --glass-border:   rgb(255 255 255 / 0.32);
+    --glass-inner:    rgb(255 255 255 / 0.14);
+    --glass-specular: rgb(255 255 255 / 0.48);
+    --glass-shade:    rgb(255 255 255 / 0.12);
+    --glass-drop:     0 18px 60px rgb(0 0 0 / 0.45);
+    --glass-blur:     24px;
+    --glass-sat:      180%;
+    --glass-contrast: 1.05;
+
+    --focus-inner: oklch(98% 0.01 240);
+    --focus-outer: rgb(0 0 0 / 0.70);
+
+    --priority-urgent-text: oklch(78% 0.150 25);
+    --priority-high-text:   oklch(82% 0.130 55);
+    --priority-medium-text: oklch(88% 0.135 88);
+    --priority-low-text:    oklch(81% 0.125 155);
+
+    --shadow-whisper: 0 1px 2px rgb(0 0 0 / 0.40);
+    --shadow-raised:  0 8px 28px rgb(0 0 0 / 0.50);
+
+    --scrim: oklch(8% 0.02 260 / 0.60);
+    --neutral-tile: var(--surface-2);
+  }
+
+  /* ---------- COMPAT ------------------------------------- */
+  /* The old names, re-pointed. Deleted in the final cleanup commit once every
+     page has moved onto the semantic names directly. Wins over the identical
+     names in @layer legacy purely by layer order — no !important needed. */
+  :root {
+    --color-paper:        var(--surface-0);
+    --color-paper-2:      var(--surface-1);
+    --color-paper-3:      var(--surface-2);
+    --color-rule:         var(--border-1);
+    --color-rule-strong:  var(--border-2);
+    --color-ink:          var(--text-1);
+    --color-ink-2:        var(--text-2);
+    --color-ink-3:        var(--text-3);
+    --color-accent:       var(--brand-500);
+    --color-accent-hover: var(--brand-600);
+    --color-accent-ink:   oklch(100% 0 0);
+    --color-accent-soft:  var(--brand-100);
+    --color-focus:        var(--focus-inner);
+
+    /* Priority: the bare name keeps pointing at -glow so nothing breaks
+       mid-migration, while -text carries the legible variant. */
+    --priority-urgent: var(--red-glow);
+    --priority-high:   var(--orange-glow);
+    --priority-medium: var(--amber-glow);
+    --priority-low:    var(--green-glow);
+
+    --success: var(--priority-low-text);
+    --warning: var(--priority-high-text);
+    --error:   var(--priority-urgent-text);
+
+    /* Opaque chip fills. Pre-mixed against --surface-1 rather than
+       color-mix()-ed at use site, because several call sites now sit on
+       translucent parents where the old mix base would be wrong. */
+    --chip-urgent: color-mix(in oklch, var(--red-glow)    16%, var(--surface-1));
+    --chip-high:   color-mix(in oklch, var(--orange-glow) 16%, var(--surface-1));
+    --chip-medium: color-mix(in oklch, var(--amber-glow)  16%, var(--surface-1));
+    --chip-low:    color-mix(in oklch, var(--green-glow)  16%, var(--surface-1));
+  }
+}

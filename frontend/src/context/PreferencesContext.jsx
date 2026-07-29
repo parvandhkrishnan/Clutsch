@@ -43,11 +43,10 @@ export const PreferencesProvider = ({ children }) => {
   const [theme, setThemeState] = useState(
     () => document.documentElement.dataset.theme || 'light'
   );
-  // 'system' | 'light' | 'dark' — distinct from `theme`, which is always resolved.
-  // Default matches the bootstrap script in index.html; both flip to 'system'
-  // in the commit that lands the dark token set.
+  // 'system' | 'light' | 'dark' — distinct from `theme`, which is always
+  // resolved. Must match the default in index.html's bootstrap script.
   const [themePreference, setThemePreferenceState] = useState(
-    () => readStored().theme || 'light'
+    () => readStored().theme || 'system'
   );
   const [reduceTransparency, setReduceTransparencyState] = useState(
     () => !!readStored().reduceTransparency

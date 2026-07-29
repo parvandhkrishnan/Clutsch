@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { usePreferences } from '../context/PreferencesContext';
 import api from '../utils/api';
 import LegalModal from './LegalModal';
-import { 
+import {
   LayoutDashboard,
   CheckSquare,
   Share2,
@@ -14,7 +15,9 @@ import {
   BarChart3,
   CreditCard,
   HelpCircle,
-  ShieldAlert
+  ShieldAlert,
+  Moon,
+  Sun
 } from 'lucide-react';
 
 const SidebarItem = ({ icon: Icon, label, to, badge, onClick }) => {
@@ -40,6 +43,7 @@ const SidebarItem = ({ icon: Icon, label, to, badge, onClick }) => {
 
 const Sidebar = () => {
   const { token, user, logout } = useAuth();
+  const { theme, toggleTheme } = usePreferences();
   const [stats, setStats] = useState({ snoozed_count: 0 });
   const [legalModal, setLegalModal] = useState(null); // 'tos' | 'privacy' | null
 
@@ -88,10 +92,19 @@ const Sidebar = () => {
       </nav>
 
       <div className="sidebar-footer">
-        <SidebarItem 
-          icon={FileText} 
-          label="Terms of Service" 
-          onClick={() => setLegalModal('tos')} 
+        <button
+          className="sidebar-item"
+          onClick={toggleTheme}
+          aria-pressed={theme === 'dark'}
+          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+        >
+          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+          <span>{theme === 'dark' ? 'Light theme' : 'Dark theme'}</span>
+        </button>
+        <SidebarItem
+          icon={FileText}
+          label="Terms of Service"
+          onClick={() => setLegalModal('tos')}
         />
         <SidebarItem 
           icon={Shield} 

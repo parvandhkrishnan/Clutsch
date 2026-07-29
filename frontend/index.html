@@ -28,11 +28,7 @@
         try {
           var stored = localStorage.getItem('clutsch.prefs');
           var prefs = stored ? JSON.parse(stored) : {};
-          // Default is 'light', not 'system', until the dark theme actually
-          // exists (Step 1). Defaulting to 'system' now would give a dark-OS
-          // user dark native scrollbars and form controls on a light page.
-          // Flip this to 'system' in the same commit that lands dark tokens.
-          var pref = prefs.theme || 'light';
+          var pref = prefs.theme || 'system';
           var dark =
             pref === 'dark' ||
             (pref === 'system' &&

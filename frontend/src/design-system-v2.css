@@ -443,7 +443,7 @@ a:hover { color: var(--color-accent-hover); }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
 /* ===== MODAL ===== */
-.modal-overlay { position: fixed; inset: 0; background: oklch(22.3% 0.0025 68 / 0.35); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: var(--z-modal); }
+.modal-overlay { position: fixed; inset: 0; background: var(--scrim); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: var(--z-modal); }
 .modal-overlay[aria-hidden="true"] { display: none; }
 .modal-card { background: var(--color-paper-2); border-radius: var(--radius-panel); box-shadow: var(--shadow-raised); padding: var(--space-xl); }
 

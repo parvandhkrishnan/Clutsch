@@ -30,7 +30,7 @@ const IntegrationSettingsModal = ({ isOpen, onClose, integration, onSave, onDisc
             <div className="integration-icon-small" style={{ 
               width: '32px', 
               height: '32px', 
-              backgroundColor: '#f1f5f9', 
+              backgroundColor: 'var(--neutral-tile)',
               borderRadius: '8px', 
               display: 'flex', 
               alignItems: 'center', 
@@ -119,12 +119,12 @@ const IntegrationSettingsModal = ({ isOpen, onClose, integration, onSave, onDisc
           </div>
 
           <div className="danger-zone-settings" style={{ borderTop: '1px solid var(--color-rule)', paddingTop: '24px', marginTop: '8px' }}>
-            <h4 style={{ color: '#ef4444', margin: '0 0 16px 0' }}>Danger Zone</h4>
+            <h4 style={{ color: 'var(--error)', margin: '0 0 16px 0' }}>Danger Zone</h4>
             <button 
               className="btn btn-secondary" 
               style={{ 
-                color: '#ef4444', 
-                borderColor: '#fecaca', 
+                color: 'var(--error)',
+                borderColor: 'var(--error)',
                 width: '100%', 
                 display: 'flex', 
                 alignItems: 'center', 

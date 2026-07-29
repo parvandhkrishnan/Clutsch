@@ -49,7 +49,7 @@ const IntegrationModal = ({ isOpen, onClose, integration, onConnectSuccess }) =>
               <div className="integration-icon-large" style={{ 
                 width: '80px', 
                 height: '80px', 
-                backgroundColor: '#f1f5f9', 
+                backgroundColor: 'var(--neutral-tile)',
                 borderRadius: '20px', 
                 display: 'flex', 
                 alignItems: 'center', 
@@ -77,7 +77,7 @@ const IntegrationModal = ({ isOpen, onClose, integration, onConnectSuccess }) =>
 
           {step === 'success' && (
             <div className="connection-success">
-              <CheckCircle2 size={64} color="#10b981" style={{ margin: '0 auto 24px' }} />
+              <CheckCircle2 size={64} color="var(--success)" style={{ margin: '0 auto 24px' }} />
               <h3>Connection Successful!</h3>
               <p style={{ marginBottom: '24px', color: 'var(--color-ink-3)' }}>
                 Your {integration.name} account is now connected and syncing.
@@ -88,7 +88,7 @@ const IntegrationModal = ({ isOpen, onClose, integration, onConnectSuccess }) =>
 
           {step === 'error' && (
             <div className="connection-error">
-              <AlertCircle size={64} color="#ef4444" style={{ margin: '0 auto 24px' }} />
+              <AlertCircle size={64} color="var(--error)" style={{ margin: '0 auto 24px' }} />
               <h3>Connection Failed</h3>
               <p style={{ marginBottom: '24px', color: 'var(--color-ink-3)' }}>{error}</p>
               <button className="btn btn-primary w-100" onClick={handleConnect}>Try Again</button>
