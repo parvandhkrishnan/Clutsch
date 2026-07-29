@@ -780,6 +780,40 @@ a:hover { color: var(--color-accent-hover); }
 .status-indicator.active { color: var(--success); }
 .status-indicator.active .status-dot { background: var(--success); }
 .status-indicator.inactive { color: var(--color-ink-3); }
+
+/* ===== BILLING ===== */
+.billing-container { max-width: 1200px; margin: 0 auto; padding: var(--space-lg); }
+.billing-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: var(--space-lg); align-items: start; margin-top: var(--space-lg); }
+@media (max-width: 900px) { .billing-grid { grid-template-columns: 1fr; } }
+.billing-main, .billing-sidebar { display: flex; flex-direction: column; gap: var(--space-lg); }
+.section-title { margin-bottom: var(--space-md); }
+.section-title h2 { margin: 0 0 var(--space-3xs) 0; }
+.section-title p { margin: 0; color: var(--color-ink-2); font-size: 0.85rem; }
+
+.plan-header { margin-bottom: var(--space-sm); }
+.plan-price { display: flex; align-items: baseline; gap: 2px; font-variant-numeric: tabular-nums; }
+.plan-features { list-style: none; padding: 0; margin: 0; flex: 1; display: flex; flex-direction: column; gap: var(--space-xs); }
+.plan-features li { display: flex; align-items: center; gap: var(--space-xs); font-size: 0.85rem; color: var(--color-ink-2); }
+.text-success { color: var(--success); }
+.plan-btn.current-btn { background: var(--color-paper-3); color: var(--color-ink-3); border-color: var(--color-rule); cursor: default; }
+
+.card-header { margin-bottom: var(--space-md); }
+.card-header h3 { margin: 0; }
+.usage-grid { display: flex; flex-direction: column; gap: var(--space-md); }
+.usage-item { display: flex; flex-direction: column; gap: var(--space-2xs); }
+.usage-info { display: flex; justify-content: space-between; font-size: 0.85rem; }
+.usage-label { color: var(--color-ink-2); }
+.usage-stats { color: var(--color-ink); font-variant-numeric: tabular-nums; font-weight: 500; }
+.neon-progress-container { height: 6px; border-radius: var(--radius-pill); background: var(--color-paper-3); overflow: hidden; }
+/* One accent for all usage metrics - four "neon" hues per meter reads as
+   decoration, not signal, and design.md reserves color for priority only. */
+.neon-progress-fill { height: 100%; border-radius: var(--radius-pill); background: var(--color-accent); transition: width var(--dur-slow) var(--ease-out); }
+
+.payment-method, .billing-history, .enterprise-cta { display: flex; flex-direction: column; gap: var(--space-sm); }
+.card-details { display: flex; align-items: center; gap: var(--space-sm); color: var(--color-ink-2); }
+.card-number { margin: 0; font-size: 0.85rem; color: var(--color-ink-2); }
+.enterprise-cta { text-align: left; }
+.enterprise-cta p { margin: 0; color: var(--color-ink-2); font-size: 0.85rem; }
 .subtitle { color: var(--color-ink-2); font-size: 0.9rem; margin: var(--space-3xs) 0 0 0; }
 .header-actions { display: flex; align-items: center; gap: var(--space-sm); }
 .live-btn { display: inline-flex; align-items: center; gap: var(--space-xs); padding: var(--space-xs) var(--space-md); border-radius: var(--radius-pill); border: 1px solid var(--color-rule-strong); background: var(--color-paper-2); color: var(--color-ink-2); font-family: var(--font-body); font-size: 0.8rem; font-weight: 500; cursor: pointer; }

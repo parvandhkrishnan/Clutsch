@@ -154,7 +154,9 @@ const Billing = () => {
                       email: subscriptionData.user_email
                     },
                     theme: {
-                      color: '#2563eb'
+                      color: '#4A4743' // Razorpay's checkout widget is a separate SDK-rendered
+                      // modal outside our stylesheet - this hex must match --color-accent's
+                      // literal value since var() isn't available to Razorpay's own JS.
                     }
                   };
 
@@ -296,7 +298,7 @@ const Billing = () => {
 
           <div className="card glass-effect billing-history">
             <h3>Billing History</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '32px 16px', gap: '12px', color: 'var(--text-muted)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '32px 16px', gap: '12px', color: 'var(--color-ink-3)' }}>
               <Receipt size={32} />
               <p style={{ margin: 0 }}>
                 Invoice history isn't available yet — there is no invoice-list endpoint on the
