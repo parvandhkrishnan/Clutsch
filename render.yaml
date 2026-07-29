@@ -1,0 +1,59 @@
+databases:
+  - name: clutsch-db
+    plan: free
+    postgresMajorVersion: 16
+
+services:
+  # --- Backend: FastAPI + gunicorn ---
+  - type: web
+    name: clutsch-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -c gunicorn.conf.py main:app
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: clutsch-db
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      # ENCRYPTION_KEY must be a real Fernet key (32 random bytes,
+      # URL-safe base64), not an arbitrary string — Render's generateValue
+      # doesn't produce this format, so it's set manually. See deployment
+      # instructions for a ready-to-paste value.
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: JOHN_PASSWORD
+        sync: false
+      - key: SARAH_PASSWORD
+        sync: false
+      # Set after the frontend's first deploy, once its real URL is known
+      # (see deployment instructions) — e.g. https://clutsch-frontend.onrender.com
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: ENFORCE_HTTPS
+        value: "true"
+      # Kept off by default — this endpoint has no real identity-provider
+      # verification behind it, see auth_routes.py. Leave unset unless you
+      # specifically want the simulated SSO demo path enabled.
+      # - key: ENABLE_SIMULATED_SSO
+      #   value: "true"
+
+  # --- Frontend: Vite build served as a static site ---
+  - type: web
+    name: clutsch-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      # Set after the backend's first deploy, once its real URL is known
+      # (see deployment instructions) — e.g. https://clutsch-backend.onrender.com
+      # Requires a rebuild to take effect (it's baked in at build time).
+      - key: VITE_API_BASE_URL
+        sync: false
