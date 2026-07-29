@@ -11,22 +11,25 @@ import {
 const Tasks = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all'); // all, snoozed, archived
   const [searchQuery, setSearchQuery] = useState('');
 
   const fetchAllItems = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       // In a real app, we might have separate endpoints.
-      // For now, we fetch items and stats separately, but the items endpoint 
-      // only returns active ones. 
-      // Since I can't change the backend easily to get archived ones without 
-      // adding a param, I'll just show active tasks here for now and 
+      // For now, we fetch items and stats separately, but the items endpoint
+      // only returns active ones.
+      // Since I can't change the backend easily to get archived ones without
+      // adding a param, I'll just show active tasks here for now and
       // maybe add a 'Snoozed' filter that works if I can get them.
       const data = await api.get('/items');
       setItems(data);
     } catch (err) {
       console.error("Failed to fetch tasks:", err);
+      setError(err.message || "Couldn't load tasks. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -95,6 +98,13 @@ const Tasks = () => {
           <div className="loading-state">
             <Loader2 className="spin" size={32} />
             <p>Loading your tasks...</p>
+          </div>
+        ) : error ? (
+          <div className="error-state">
+            <p>{error}</p>
+            <button className="btn btn-secondary btn-sm" style={{ marginTop: '12px' }} onClick={fetchAllItems}>
+              Retry
+            </button>
           </div>
         ) : filteredItems.length > 0 ? (
           <div className="tasks-table">
