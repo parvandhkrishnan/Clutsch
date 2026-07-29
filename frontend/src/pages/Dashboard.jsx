@@ -42,10 +42,10 @@ const PriorityGauge = ({ score }) => {
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (score / 100) * circumference;
   
-  let color = '#10b981'; // Green
-  if (score >= 80) color = '#ef4444'; // Red (Urgent)
-  else if (score >= 60) color = '#f97316'; // Orange (High)
-  else if (score >= 30) color = '#facc15'; // Yellow (Medium)
+  let color = 'var(--priority-low)';
+  if (score >= 80) color = 'var(--priority-urgent)';
+  else if (score >= 60) color = 'var(--priority-high)';
+  else if (score >= 30) color = 'var(--priority-medium)';
 
   return (
     <div className="priority-gauge" role="img" aria-label={`Priority score: ${Math.round(score)} out of 100`}>
@@ -67,7 +67,7 @@ const PriorityGauge = ({ score }) => {
           strokeLinecap="round"
           transform="rotate(-90 50 50)"
         />
-        <text x="50" y="55" textAnchor="middle" fontSize="20" fontWeight="bold" fill="var(--text-primary)">
+        <text x="50" y="55" textAnchor="middle" fontSize="20" fontWeight="bold" fill="var(--color-ink)">
           {Math.round(score)}
         </text>
       </svg>
@@ -136,7 +136,7 @@ const ActionableItem = ({ item, isSelected, onSelect, onToggleSelect, showCheckb
               </div>
             ))}
             {presence.length > 3 && <span className="presence-more">+{presence.length - 3}</span>}
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: '8px', alignSelf: 'center' }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--color-ink-3)', marginLeft: '8px', alignSelf: 'center' }}>
               Team active
             </span>
           </div>
@@ -233,11 +233,11 @@ const FocusPanel = ({ item, onArchive, onSnooze, onOpen, onDelegate, presence = 
           <p>{item.explanation || item.ai_summary || "No specific reasoning provided."}</p>
           <div className="signals">
             <div className="signal-item">
-              <TrendingUp size={16} color="#ef4444" />
+              <TrendingUp size={16} color="var(--priority-urgent)" />
               <span>Urgency: {Math.round((item.urgency || 0) * 100)}%</span>
             </div>
             <div className="signal-item">
-              <TrendingUp size={16} color="#3b82f6" />
+              <TrendingUp size={16} color="var(--color-accent)" />
               <span>Importance: {Math.round((item.importance || 0) * 100)}%</span>
             </div>
           </div>
@@ -563,10 +563,10 @@ const Dashboard = () => {
         showProgress 
         styles={{
           options: {
-            primaryColor: '#3b82f6',
-            backgroundColor: '#1e293b',
-            textColor: '#f8fafc',
-            arrowColor: '#1e293b',
+            primaryColor: 'var(--color-accent)',
+            backgroundColor: 'var(--color-paper-2)',
+            textColor: 'var(--color-ink)',
+            arrowColor: 'var(--color-paper-2)',
           }
         }}
       />
@@ -576,12 +576,12 @@ const Dashboard = () => {
             <h2 style={{ margin: 0, fontSize: '1.1rem' }}>Priority Feed</h2>
             {loading && <Loader2 className="spin" size={16} />}
           </div>
-          <input 
-            type="text" 
-            placeholder="Search..." 
+          <input
+            type="text"
+            placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ flex: 1, minWidth: '140px', maxWidth: '260px', padding: '6px 12px', borderRadius: '9999px', border: '1px solid var(--glass-border)', background: 'var(--glass-fill)', backdropFilter: 'blur(12px)', fontSize: '0.8rem', fontFamily: 'var(--font-family)', color: 'var(--text-primary)', outline: 'none' }}
+            className="search-input"
             aria-label="Search items"
           />
           <span className="item-count">{filteredItems.length} items</span>
@@ -589,18 +589,16 @@ const Dashboard = () => {
 
         {/* Compact filter bar */}
         <div className="feed-controls" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center', padding: '0 0 8px 0' }}>
-          <div className="view-toggle" style={{ display: 'flex', borderRadius: '9999px', background: 'var(--glass-fill)', backdropFilter: 'blur(12px)', border: '1px solid var(--glass-border)', overflow: 'hidden', flexShrink: 0 }}>
-            <button 
+          <div className="view-toggle">
+            <button
               className={`toggle-btn ${viewMode === 'personal' ? 'active' : ''}`}
               onClick={() => setViewMode('personal')}
-              style={{ padding: '4px 12px', fontSize: '0.75rem', border: 'none', background: viewMode === 'personal' ? 'var(--accent)' : 'transparent', color: viewMode === 'personal' ? '#fff' : 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font-family)', fontWeight: 500, transition: 'all 0.2s' }}
             >
               Personal
             </button>
-            <button 
+            <button
               className={`toggle-btn ${viewMode === 'team' ? 'active' : ''}`}
               onClick={() => setViewMode('team')}
-              style={{ padding: '4px 12px', fontSize: '0.75rem', border: 'none', background: viewMode === 'team' ? 'var(--accent)' : 'transparent', color: viewMode === 'team' ? '#fff' : 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font-family)', fontWeight: 500, transition: 'all 0.2s' }}
             >
               Team
             </button>
@@ -609,11 +607,10 @@ const Dashboard = () => {
           {/* Source filter */}
           <div className="filter-row" style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', alignItems: 'center' }}>
             {availableSources.map(src => (
-              <button 
+              <button
                 key={src}
                 className={`tier-chip ${sourceFilter === src ? 'active' : ''}`}
                 onClick={() => setSourceFilter(src)}
-                style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '9999px', border: '1px solid var(--glass-border)', background: sourceFilter === src ? 'var(--accent)' : 'var(--glass-fill)', color: sourceFilter === src ? '#fff' : 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font-family)', transition: 'all 0.2s', backdropFilter: 'blur(8px)' }}
               >
                 {src === 'all' ? 'All' : src.charAt(0).toUpperCase() + src.slice(1)}
               </button>
@@ -623,11 +620,10 @@ const Dashboard = () => {
           {/* Date range filter */}
           <div className="filter-row" style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', alignItems: 'center' }}>
             {dateRanges.map(dr => (
-              <button 
+              <button
                 key={dr.value}
                 className={`tier-chip ${dateFilter === dr.value ? 'active' : ''}`}
                 onClick={() => setDateFilter(dr.value)}
-                style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '9999px', border: '1px solid var(--glass-border)', background: dateFilter === dr.value ? 'var(--accent)' : 'var(--glass-fill)', color: dateFilter === dr.value ? '#fff' : 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font-family)', transition: 'all 0.2s', backdropFilter: 'blur(8px)' }}
               >
                 {dr.label}
               </button>
@@ -636,13 +632,13 @@ const Dashboard = () => {
 
           {/* Score threshold */}
           <div className="filter-row" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{scoreThreshold}+</span>
-            <input 
-              type="range" 
+            <span style={{ fontSize: '0.7rem', color: 'var(--color-ink-3)', whiteSpace: 'nowrap' }}>{scoreThreshold}+</span>
+            <input
+              type="range"
               min="0" max="100" step="5"
               value={scoreThreshold}
               onChange={(e) => setScoreThreshold(Number(e.target.value))}
-              style={{ width: '60px', height: '4px', accentColor: 'var(--accent)' }}
+              className="score-range"
               aria-label={`Minimum priority score: ${scoreThreshold}`}
             />
           </div>
@@ -650,11 +646,10 @@ const Dashboard = () => {
           {/* Tier filter */}
           <div className="feed-filters" style={{ display: 'flex', gap: '3px' }}>
             {tiers.map(tier => (
-              <button 
+              <button
                 key={tier}
                 className={`tier-chip ${selectedTier === tier ? 'active' : ''} ${tier}`}
                 onClick={() => setSelectedTier(tier)}
-                style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '9999px', border: '1px solid var(--glass-border)', background: selectedTier === tier ? 'var(--accent)' : 'var(--glass-fill)', color: selectedTier === tier ? '#fff' : 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font-family)', transition: 'all 0.2s', backdropFilter: 'blur(8px)', textTransform: 'capitalize' }}
               >
                 {tier}
               </button>
@@ -663,14 +658,14 @@ const Dashboard = () => {
 
           {/* Select All */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
-            <input 
-              type="checkbox" 
+            <input
+              type="checkbox"
               checked={selectedIds.size > 0 && selectedIds.size === filteredItems.length}
               onChange={toggleSelectAll}
-              style={{ accentColor: 'var(--accent)', width: '14px', height: '14px', cursor: 'pointer' }}
+              style={{ accentColor: 'var(--color-accent)', width: '14px', height: '14px', cursor: 'pointer' }}
               aria-label="Select all items"
             />
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--color-ink-3)' }}>
               {selectedIds.size > 0 ? `${selectedIds.size}` : ''}
             </span>
           </div>
@@ -678,13 +673,8 @@ const Dashboard = () => {
 
         {/* Bulk action toolbar */}
         {selectedIds.size > 0 && (
-          <div className="bulk-action-bar" style={{
-            position: 'sticky', bottom: 0, left: 0, right: 0,
-            background: 'rgba(30, 41, 59, 0.95)', backdropFilter: 'blur(12px)',
-            padding: '12px 16px', display: 'flex', gap: '8px', alignItems: 'center',
-            borderTop: '1px solid var(--glass-border)', zIndex: 10
-          }}>
-            <span style={{ color: 'var(--text-primary)', fontSize: '0.85rem', marginRight: 'auto' }}>
+          <div className="bulk-action-bar" style={{ position: 'sticky', bottom: 0, left: 0, right: 0, zIndex: 'var(--z-sticky)' }}>
+            <span style={{ color: 'var(--color-ink)', fontSize: '0.85rem', marginRight: 'auto' }}>
               {selectedIds.size} selected
             </span>
             <button className="btn btn-primary btn-sm" onClick={handleBulkArchive} disabled={bulkActionLoading}>
@@ -719,13 +709,13 @@ const Dashboard = () => {
           ))}
           {loading && initialLoad && (
             <div className="loading-state" style={{ textAlign: 'center', padding: '60px 20px' }} role="status">
-              <Loader2 size={48} className="spin" style={{ color: 'var(--primary-blue)', marginBottom: '16px' }} />
-              <p style={{ color: 'var(--text-muted)' }}>Loading your priority feed...</p>
+              <Loader2 size={48} className="spin" style={{ color: 'var(--color-accent)', marginBottom: '16px' }} />
+              <p style={{ color: 'var(--color-ink-3)' }}>Loading your priority feed...</p>
             </div>
           )}
           {!loading && !initialLoad && filteredItems.length === 0 && (
             <div className="empty-msg" style={{ textAlign: 'center', padding: '60px 20px' }} role="status">
-              <Check size={48} style={{ color: 'var(--success-green)', marginBottom: '16px' }} />
+              <Check size={48} style={{ color: 'var(--success)', marginBottom: '16px' }} />
               <p>
                 {searchQuery || sourceFilter !== 'all' || dateFilter !== 'all' || scoreThreshold > 0
                   ? `No items match your filters. Try adjusting your search criteria.`
