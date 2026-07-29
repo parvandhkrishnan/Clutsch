@@ -260,12 +260,31 @@ a:hover { color: var(--accent-hover); }
 .nav-item:hover { background: var(--glass-fill); color: var(--text-primary); }
 .nav-item.active { background: var(--accent); color: #FFFFFF; }
 
+/* ===== APP SHELL =====
+   .app-container/.main-content previously had no rules anywhere in the
+   codebase — the sidebar (a block-level element, 240px wide, 100vh tall)
+   and main content just stacked in normal document flow instead of
+   sitting side by side. This is the fix for that: a flex row joining
+   them. Quick-fix pass (Phase 0) using existing token names; refined in
+   the full redesign, not replaced. */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+  padding: 24px;
+}
+
 /* ===== SIDEBAR ===== */
 .sidebar {
   background: var(--clay-bg);
   border-radius: 0;
   min-height: 100vh;
   width: 240px;
+  flex-shrink: 0;
   padding: 16px;
   display: flex;
   flex-direction: column;
