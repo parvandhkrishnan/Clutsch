@@ -16,17 +16,10 @@ import Analytics from './pages/Analytics';
 import Billing from './pages/Billing';
 import HelpCenter from './pages/HelpCenter';
 import Admin from './pages/Admin';
-import './App.css';
 
 const MainLayout = ({ children }) => (
   <div className="app-container">
-    <a href="#main-content" className="skip-to-content" style={{
-      position: 'absolute', left: '-9999px', zIndex: 9999,
-      padding: '8px 16px', background: 'var(--primary-blue)', color: 'white',
-      textDecoration: 'none', borderRadius: '0 0 4px 4px', fontSize: '0.9rem'
-    }}
-    onFocus={(e) => e.target.style.left = '8px'}
-    onBlur={(e) => e.target.style.left = '-9999px'}>
+    <a href="#main-content" className="skip-to-content">
       Skip to content
     </a>
     <Sidebar />

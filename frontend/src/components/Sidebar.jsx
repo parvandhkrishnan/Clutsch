@@ -64,8 +64,8 @@ const Sidebar = () => {
   return (
     <aside className="sidebar">
       <div className="logo">
-        <div className="logo-icon" style={{ background: 'linear-gradient(135deg, #6C3BFF, #00F0FF)' }}>C</div>
-        <span className="logo-text text-display" style={{ fontWeight: 700, letterSpacing: '-0.03em' }}>Clutsch</span>
+        <div className="logo-icon">C</div>
+        <span className="logo-text">Clutsch</span>
       </div>
       <nav className="nav-links">
         <SidebarItem icon={LayoutDashboard} label="Dashboard" to="/dashboard" />

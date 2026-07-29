@@ -1,3 +1,4 @@
 /* index.css - Minimal reset (design tokens in design-system-v2.css) */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-@import url('https://api.fontshare.com/v2/css?f[]=satoshi@700,500,600,400&display=swap');
+/* Font loading moved to index.html <link> tags — a CSS @import blocks the
+   render tree until the fetch completes; <link rel="preconnect"/"stylesheet">
+   doesn't. See design.md § Notes. */
