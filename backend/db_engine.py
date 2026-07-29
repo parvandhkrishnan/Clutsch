@@ -3,11 +3,18 @@ import os
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.pool import NullPool
 
-# Connection string from environment, with a sensible local-dev default
+# Connection string from environment, with a sensible local-dev default.
+# Managed Postgres providers (Render, Heroku, etc.) hand out a plain
+# postgresql:// URL, which SQLAlchemy would default to a sync driver we
+# don't install — normalize to the asyncpg dialect explicitly.
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
     "postgresql+asyncpg://clutsch:clutsch_dev_2024@localhost:5432/clutsch"
 )
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+elif DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
 
 # asyncpg connections are bound to the event loop they were opened on — reusing
 # a pooled connection from a different loop raises "attached to a different

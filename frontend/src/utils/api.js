@@ -1,4 +1,8 @@
-const API_BASE_URL = '';
+// Empty by default: frontend and backend served from the same origin
+// (local dev via Vite proxy, or a single combined deployment). Set
+// VITE_API_BASE_URL at build time when the backend is hosted separately
+// (e.g. https://clutsch-backend.onrender.com).
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 class ApiError extends Error {
   constructor(message, status, data) {

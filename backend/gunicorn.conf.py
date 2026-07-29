@@ -7,8 +7,9 @@ For a 2-core machine: 5 workers
 import os
 import multiprocessing
 
-# Bind to the port the platform expects
-bind = "0.0.0.0:8001"
+# Bind to the port the platform expects. Hosting platforms like Render
+# assign a port dynamically via the PORT env var rather than a fixed one.
+bind = f"0.0.0.0:{os.environ.get('PORT', 8001)}"
 
 # Worker count: 2-4 per CPU core is standard for Uvicorn workers
 # In production set WORKERS env var, otherwise auto-detect

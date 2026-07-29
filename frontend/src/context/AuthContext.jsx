@@ -1,7 +1,8 @@
 import { createContext, useState, useContext, useEffect } from 'react';
 
-// API calls go to the same origin (handled by SPA proxy)
-const API_BASE_URL = '';
+// Empty by default (same-origin); set VITE_API_BASE_URL at build time
+// when the backend is hosted separately from the frontend.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 const AuthContext = createContext(null);
 
