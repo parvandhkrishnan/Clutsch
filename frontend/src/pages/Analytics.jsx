@@ -25,10 +25,10 @@ const MOCK_TREEMAP_DATA = [
   {
     name: 'Communications',
     children: [
-      { name: 'Critical', value: 45, color: '#ef4444' },
-      { name: 'High', value: 30, color: '#f97316' },
-      { name: 'Medium', value: 20, color: '#eab308' },
-      { name: 'Low', value: 5, color: '#3b82f6' },
+      { name: 'Critical', value: 45, color: 'var(--priority-urgent)' },
+      { name: 'High', value: 30, color: 'var(--priority-high)' },
+      { name: 'Medium', value: 20, color: 'var(--priority-medium)' },
+      { name: 'Low', value: 5, color: 'var(--priority-low)' },
     ],
   },
 ];
@@ -54,14 +54,14 @@ const CustomizedContent = (props) => {
         width={width}
         height={height}
         style={{
-          fill: depth < 2 ? colors[index % colors.length] : '#ffffff00',
-          stroke: '#fff',
+          fill: depth < 2 ? colors[index % colors.length] : 'transparent',
+          stroke: 'var(--color-paper-2)',
           strokeWidth: 2 / (depth + 1),
           strokeOpacity: 1 / (depth + 1),
         }}
       />
       {depth === 1 && width > 50 && height > 30 ? (
-        <text x={x + width / 2} y={y + height / 2 + 7} textAnchor="middle" fill="#fff" fontSize={width > 100 ? 14 : 10} fontWeight="bold">
+        <text x={x + width / 2} y={y + height / 2 + 7} textAnchor="middle" fill="var(--color-paper-2)" fontSize={width > 100 ? 14 : 10} fontWeight="bold">
           {name}
         </text>
       ) : null}
@@ -133,10 +133,10 @@ const Analytics = () => {
     {
       name: 'Communications',
       children: [
-        { name: 'Urgent', value: metrics.priority_distribution.urgent, color: '#ef4444' },
-        { name: 'High', value: metrics.priority_distribution.high, color: '#f97316' },
-        { name: 'Medium', value: metrics.priority_distribution.medium, color: '#eab308' },
-        { name: 'Low', value: metrics.priority_distribution.low, color: '#3b82f6' },
+        { name: 'Urgent', value: metrics.priority_distribution.urgent, color: 'var(--priority-urgent)' },
+        { name: 'High', value: metrics.priority_distribution.high, color: 'var(--priority-high)' },
+        { name: 'Medium', value: metrics.priority_distribution.medium, color: 'var(--priority-medium)' },
+        { name: 'Low', value: metrics.priority_distribution.low, color: 'var(--priority-low)' },
       ],
     }
   ] : MOCK_TREEMAP_DATA;
@@ -224,23 +224,23 @@ const Analytics = () => {
               <AreaChart data={activityData}>
                 <defs>
                   <linearGradient id="colorActions" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.25}/>
+                    <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis dataKey="date" stroke="#94a3b8" axisLine={false} tickLine={false} />
-                <YAxis stroke="#94a3b8" axisLine={false} tickLine={false} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '12px' }}
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-rule)" vertical={false} />
+                <XAxis dataKey="date" stroke="var(--color-ink-3)" axisLine={false} tickLine={false} />
+                <YAxis stroke="var(--color-ink-3)" axisLine={false} tickLine={false} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: 'var(--color-paper-2)', border: '1px solid var(--color-rule)', borderRadius: '12px' }}
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="actions" 
-                  stroke="#3b82f6" 
+                <Area
+                  type="monotone"
+                  dataKey="actions"
+                  stroke="var(--color-accent)"
                   strokeWidth={3}
-                  fillOpacity={1} 
-                  fill="url(#colorActions)" 
+                  fillOpacity={1}
+                  fill="url(#colorActions)"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -258,10 +258,10 @@ const Analytics = () => {
                 data={priorityData}
                 dataKey="value"
                 aspectRatio={4 / 3}
-                stroke="#fff"
-                fill="#8884d8"
+                stroke="var(--color-paper-2)"
+                fill="var(--color-accent)"
                 onClick={onTreemapClick}
-                content={<CustomizedContent colors={['#ef4444', '#f97316', '#eab308', '#3b82f6']} />}
+                content={<CustomizedContent colors={['var(--priority-urgent)', 'var(--priority-high)', 'var(--priority-medium)', 'var(--priority-low)']} />}
               />
             </ResponsiveContainer>
           </div>
