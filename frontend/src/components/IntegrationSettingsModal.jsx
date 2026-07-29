@@ -36,7 +36,7 @@ const IntegrationSettingsModal = ({ isOpen, onClose, integration, onSave, onDisc
               alignItems: 'center', 
               justifyContent: 'center' 
             }}>
-              <integration.icon size={20} color="var(--primary-blue)" />
+              <integration.icon size={20} color="var(--color-accent)" />
             </div>
             <h2 style={{ fontSize: '1.25rem' }}>{integration.name} Settings</h2>
           </div>
@@ -48,7 +48,7 @@ const IntegrationSettingsModal = ({ isOpen, onClose, integration, onSave, onDisc
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
               <div>
                 <h4 style={{ margin: '0 0 4px 0' }}>Enable Integration</h4>
-                <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-ink-3)' }}>
                   Allow Clutsch to process data from this source.
                 </p>
               </div>
@@ -64,7 +64,7 @@ const IntegrationSettingsModal = ({ isOpen, onClose, integration, onSave, onDisc
 
             <div style={{ marginBottom: '24px' }}>
               <h4 style={{ margin: '0 0 8px 0' }}>Priority Threshold: {settings.priorityThreshold}</h4>
-              <p style={{ margin: '0 0 16px 0', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+              <p style={{ margin: '0 0 16px 0', fontSize: '0.875rem', color: 'var(--color-ink-3)' }}>
                 Only show items with a priority score higher than this value.
               </p>
               <input 
@@ -75,7 +75,7 @@ const IntegrationSettingsModal = ({ isOpen, onClose, integration, onSave, onDisc
                 onChange={(e) => setSettings({...settings, priorityThreshold: parseInt(e.target.value)})}
                 style={{ width: '100%', cursor: 'pointer' }}
               />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--color-ink-3)', marginTop: '8px' }}>
                 <span>Show All</span>
                 <span>Only Critical</span>
               </div>
@@ -88,7 +88,7 @@ const IntegrationSettingsModal = ({ isOpen, onClose, integration, onSave, onDisc
                   width: '100%', 
                   padding: '10px', 
                   borderRadius: '8px', 
-                  border: '1px solid var(--glass-border)',
+                  border: '1px solid var(--color-rule)',
                   backgroundColor: 'white'
                 }} 
                 value={settings.syncFrequency}
@@ -103,7 +103,7 @@ const IntegrationSettingsModal = ({ isOpen, onClose, integration, onSave, onDisc
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
               <div>
                 <h4 style={{ margin: '0 0 4px 0' }}>Urgent Notifications</h4>
-                <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-ink-3)' }}>
                   Notify me immediately for items with priority &gt; 90.
                 </p>
               </div>
@@ -118,7 +118,7 @@ const IntegrationSettingsModal = ({ isOpen, onClose, integration, onSave, onDisc
             </div>
           </div>
 
-          <div className="danger-zone-settings" style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '24px', marginTop: '8px' }}>
+          <div className="danger-zone-settings" style={{ borderTop: '1px solid var(--color-rule)', paddingTop: '24px', marginTop: '8px' }}>
             <h4 style={{ color: '#ef4444', margin: '0 0 16px 0' }}>Danger Zone</h4>
             <button 
               className="btn btn-secondary" 
@@ -139,7 +139,7 @@ const IntegrationSettingsModal = ({ isOpen, onClose, integration, onSave, onDisc
           </div>
         </div>
 
-        <div className="modal-footer" style={{ borderTop: '1px solid var(--glass-border)', padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+        <div className="modal-footer" style={{ borderTop: '1px solid var(--color-rule)', padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
           <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
           <button 
             className="btn btn-primary" 

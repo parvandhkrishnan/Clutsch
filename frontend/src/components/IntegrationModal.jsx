@@ -56,9 +56,9 @@ const IntegrationModal = ({ isOpen, onClose, integration, onConnectSuccess }) =>
                 justifyContent: 'center',
                 margin: '0 auto 24px'
               }}>
-                <integration.icon size={48} color="var(--primary-blue)" />
+                <integration.icon size={48} color="var(--color-accent)" />
               </div>
-              <p style={{ marginBottom: '24px', color: 'var(--text-muted)' }}>
+              <p style={{ marginBottom: '24px', color: 'var(--color-ink-3)' }}>
                 Connect your {integration.name} account to start prioritizing your communications with AI.
               </p>
               <button className="btn btn-primary w-100" onClick={handleConnect} style={{ padding: '12px' }}>
@@ -69,9 +69,9 @@ const IntegrationModal = ({ isOpen, onClose, integration, onConnectSuccess }) =>
 
           {step === 'connecting' && (
             <div className="connection-loading">
-              <Loader2 className="spin" size={64} color="var(--primary-blue)" style={{ margin: '0 auto 24px' }} />
+              <Loader2 className="spin" size={64} color="var(--color-accent)" style={{ margin: '0 auto 24px' }} />
               <h3>Connecting to {integration.name}...</h3>
-              <p style={{ color: 'var(--text-muted)' }}>Please wait while we authorize your account.</p>
+              <p style={{ color: 'var(--color-ink-3)' }}>Please wait while we authorize your account.</p>
             </div>
           )}
 
@@ -79,7 +79,7 @@ const IntegrationModal = ({ isOpen, onClose, integration, onConnectSuccess }) =>
             <div className="connection-success">
               <CheckCircle2 size={64} color="#10b981" style={{ margin: '0 auto 24px' }} />
               <h3>Connection Successful!</h3>
-              <p style={{ marginBottom: '24px', color: 'var(--text-muted)' }}>
+              <p style={{ marginBottom: '24px', color: 'var(--color-ink-3)' }}>
                 Your {integration.name} account is now connected and syncing.
               </p>
               <button className="btn btn-primary w-100" onClick={onClose}>Done</button>
@@ -90,7 +90,7 @@ const IntegrationModal = ({ isOpen, onClose, integration, onConnectSuccess }) =>
             <div className="connection-error">
               <AlertCircle size={64} color="#ef4444" style={{ margin: '0 auto 24px' }} />
               <h3>Connection Failed</h3>
-              <p style={{ marginBottom: '24px', color: 'var(--text-muted)' }}>{error}</p>
+              <p style={{ marginBottom: '24px', color: 'var(--color-ink-3)' }}>{error}</p>
               <button className="btn btn-primary w-100" onClick={handleConnect}>Try Again</button>
             </div>
           )}
