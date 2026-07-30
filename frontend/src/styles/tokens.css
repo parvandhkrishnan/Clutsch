@@ -55,15 +55,16 @@
        narrow band means the composite luminance behind any glass surface is
        bounded, so worst-case contrast is computable once instead of being
        audited per page. */
-    /* Same measurement applied here. Light was the worse offender: chroma
-       0.070 rendered as rgb(166,237,240), a 74-point red-to-blue spread —
-       markedly more cyan than dark ever was. Pulled to 0.014 (≈14 points) so
-       toggling themes doesn't jump from grey to cyan. Light needs slightly
-       more chroma than dark to register at all against a 96% base. */
-    --field-base:  oklch(96% 0.006 235);
-    --field-bloom-a: oklch(90% 0.014 200);
-    --field-bloom-b: oklch(91% 0.013 245);
-    --field-bloom-c: oklch(93% 0.011 265);
+    /* Light stays vivid by explicit choice: the cool blooms are the design
+       here, and on a 96% base they read as colour without the channel-crushing
+       that made the same chroma look like saturated teal on the dark canvas.
+       The two themes are deliberately NOT symmetrical — dark is neutral grey
+       with a luminance-only field, light is a colour field. Don't "fix" the
+       asymmetry by matching them. */
+    --field-base:  oklch(96% 0.012 235);
+    --field-bloom-a: oklch(90% 0.070 200);
+    --field-bloom-b: oklch(91% 0.060 245);
+    --field-bloom-c: oklch(93% 0.045 265);
     --grain-alpha: 0.030;
 
     /* Opaque content plates. Text lives here, never directly on glass. */
