@@ -505,6 +505,32 @@
     color: var(--text-3);
   }
 
+  /* ---------- INTEGRATION LOGO STRIP ---------------------- */
+  /*
+    Deliberately NOT glass. These repeat seven times, and repeated blurred
+    surfaces are exactly what the whitelist exists to prevent. A flat tile also
+    keeps the brand marks legible, which is the whole point of the strip.
+  */
+  .integration-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-md);
+    background: var(--surface-1);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-input);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-2);
+  }
+  .integration-chip img {
+    width: 20px;
+    height: 20px;
+    /* contain, not cover: cover would crop a non-square mark. */
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
   /* ---------- FALLBACKS ----------------------------------- */
   /*
     Four of them, because backdrop-filter degrades badly and unevenly.

@@ -17,8 +17,11 @@ const PricingCard = ({ tier, price, features, cta, isFree, onClick }) => (
 );
 
 const IntegrationIcon = ({ src, label }) => (
-  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 18px', background: 'var(--color-paper-2)', border: '1px solid var(--color-rule)', borderRadius: 'var(--radius-input)', fontSize: '14px', fontWeight: 500, color: 'var(--color-ink-2)' }}>
-    <img src={src} alt={label} width="20" height="20" style={{ borderRadius: '2px' }} /><span>{label}</span>
+  <div className="integration-chip">
+    {/* No border-radius on the mark itself — it was clipping the corners of
+        square logos. object-fit:contain stops any non-square mark squashing. */}
+    <img src={src} alt={`${label} logo`} width="20" height="20" loading="lazy" decoding="async" />
+    <span>{label}</span>
   </div>
 );
 
