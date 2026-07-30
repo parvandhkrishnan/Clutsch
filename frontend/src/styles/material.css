@@ -430,14 +430,80 @@
     color: var(--text-1);
   }
 
-  .theme-toggle {
+  /* ---------- GLASS CONTROL ------------------------------- */
+  /*
+    The lighter glass treatment, at control scale: blur + rim + top specular +
+    a whisper of shadow, without the liquid button's pointer-tracked hotspot.
+
+    One shared rule rather than per-component copies, so the theme toggle, the
+    landing nav and the pricing CTAs stay genuinely identical instead of
+    drifting apart the first time one of them is tweaked.
+
+    Budget note: this puts ~9 blurred surfaces on the landing page, above the
+    8-surface guideline. Accepted deliberately — the guideline exists for the
+    dense authenticated views, and these are small, static, non-repeating
+    controls. A nav button is ~3.6k px to blur; the dashboard feed container
+    is ~448k. Ten of these cost a fraction of one panel. This relaxation does
+    NOT extend to the dashboard's chips, badges or table rows, which repeat.
+  */
+  .glass-control,
+  .theme-toggle,
+  .landing-nav .btn,
+  .pricing-card .btn,
+  .billing-plan-card .btn {
     background: var(--glass-base);
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
             backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
-    border-color: var(--glass-border);
+    border: 1px solid var(--glass-border);
     box-shadow: inset 0 1px 0 var(--glass-specular), var(--shadow-whisper);
+    color: var(--text-1);
+    transition: background var(--dur-fast) var(--ease-out),
+                border-color var(--dur-fast) var(--ease-out),
+                transform var(--dur-fast) var(--ease-out);
   }
-  .theme-toggle:hover { background: var(--glass-tint-lo); }
+
+  .glass-control:hover,
+  .theme-toggle:hover,
+  .landing-nav .btn:hover,
+  .pricing-card .btn:hover,
+  .billing-plan-card .btn:hover {
+    background: var(--glass-tint-lo);
+    border-color: var(--glass-specular);
+  }
+
+  .glass-control:active,
+  .landing-nav .btn:active,
+  .pricing-card .btn:active,
+  .billing-plan-card .btn:active { transform: translateY(1px); }
+
+  /* Glass on everything flattens hierarchy, so the primary action keeps the
+     brand-tinted under-fill to stay distinguishable from its neighbours. */
+  .landing-nav .btn-primary,
+  .pricing-card .btn-primary,
+  .billing-plan-card .btn-primary {
+    background:
+      linear-gradient(135deg, var(--glass-tint-hi), var(--glass-tint-lo)),
+      var(--liquid-fill-brand);
+    border-color: var(--brand-500);
+  }
+  .landing-nav .btn-primary:hover,
+  .pricing-card .btn-primary:hover,
+  .billing-plan-card .btn-primary:hover {
+    background:
+      linear-gradient(135deg, var(--glass-specular), var(--glass-tint-hi)),
+      var(--liquid-fill-brand);
+  }
+
+  /* The current plan is not actionable — keep it flat so it doesn't read as
+     a button competing with the real CTAs. */
+  .billing-plan-card .plan-btn.current-btn {
+    background: var(--surface-2);
+    -webkit-backdrop-filter: none;
+            backdrop-filter: none;
+    box-shadow: none;
+    border-color: var(--border-1);
+    color: var(--text-3);
+  }
 
   /* ---------- FALLBACKS ----------------------------------- */
   /*
@@ -445,17 +511,24 @@
     prefers-reduced-transparency in particular is NOT implemented in Firefox,
     which is why there is also a user-facing toggle writing
     [data-transparency="reduce"].
+
+    The surface list is written once via :is() and repeated per condition.
+    Keeping it as one list matters: every time a new surface gains glass it has
+    to be added here too, and a scattered set of hand-maintained lists is how a
+    surface quietly ends up with no fallback at all.
   */
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .glass, .btn-liquid, .sidebar, .modal-card, .focus-panel, .toast,
-    .items-scroll, .bulk-action-bar, .view-toggle, .theme-toggle {
+    :is(.glass, .btn-liquid, .glass-control, .sidebar, .modal-card, .focus-panel,
+        .toast, .items-scroll, .bulk-action-bar, .view-toggle, .theme-toggle,
+        .landing-nav .btn, .pricing-card .btn, .billing-plan-card .btn) {
       background: var(--surface-1);
     }
   }
 
   @media (prefers-reduced-transparency: reduce) {
-    .glass, .btn-liquid, .sidebar, .modal-card, .focus-panel, .toast,
-    .items-scroll, .bulk-action-bar, .view-toggle, .theme-toggle {
+    :is(.glass, .btn-liquid, .glass-control, .sidebar, .modal-card, .focus-panel,
+        .toast, .items-scroll, .bulk-action-bar, .view-toggle, .theme-toggle,
+        .landing-nav .btn, .pricing-card .btn, .billing-plan-card .btn) {
       background: var(--surface-1);
       -webkit-backdrop-filter: none;
               backdrop-filter: none;
@@ -463,16 +536,10 @@
     .btn-liquid::before { display: none; }
   }
 
-  :root[data-transparency="reduce"] .glass,
-  :root[data-transparency="reduce"] .btn-liquid,
-  :root[data-transparency="reduce"] .sidebar,
-  :root[data-transparency="reduce"] .modal-card,
-  :root[data-transparency="reduce"] .focus-panel,
-  :root[data-transparency="reduce"] .toast,
-  :root[data-transparency="reduce"] .items-scroll,
-  :root[data-transparency="reduce"] .bulk-action-bar,
-  :root[data-transparency="reduce"] .view-toggle,
-  :root[data-transparency="reduce"] .theme-toggle {
+  :root[data-transparency="reduce"]
+  :is(.glass, .btn-liquid, .glass-control, .sidebar, .modal-card, .focus-panel,
+      .toast, .items-scroll, .bulk-action-bar, .view-toggle, .theme-toggle,
+      .landing-nav .btn, .pricing-card .btn, .billing-plan-card .btn) {
     background: var(--surface-1);
     -webkit-backdrop-filter: none;
             backdrop-filter: none;
@@ -480,8 +547,9 @@
   :root[data-transparency="reduce"] .btn-liquid::before { display: none; }
 
   @media (prefers-contrast: more) {
-    .glass, .btn-liquid, .sidebar, .modal-card, .focus-panel, .toast,
-    .items-scroll, .bulk-action-bar, .view-toggle, .theme-toggle {
+    :is(.glass, .btn-liquid, .glass-control, .sidebar, .modal-card, .focus-panel,
+        .toast, .items-scroll, .bulk-action-bar, .view-toggle, .theme-toggle,
+        .landing-nav .btn, .pricing-card .btn, .billing-plan-card .btn) {
       background: var(--surface-1);
       border-color: var(--text-2);
     }
@@ -491,8 +559,9 @@
      backgrounds, so every glass panel collapses into one flat colour and the
      layout dissolves. Restoring explicit borders is the fix. */
   @media (forced-colors: active) {
-    .glass, .btn-liquid, .sidebar, .modal-card, .focus-panel, .toast,
-    .items-scroll, .bulk-action-bar, .view-toggle, .theme-toggle {
+    :is(.glass, .btn-liquid, .glass-control, .sidebar, .modal-card, .focus-panel,
+        .toast, .items-scroll, .bulk-action-bar, .view-toggle, .theme-toggle,
+        .landing-nav .btn, .pricing-card .btn, .billing-plan-card .btn) {
       border: 1px solid CanvasText;
     }
     .glass::after, .btn-liquid::before { display: none; }
