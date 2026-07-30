@@ -57,6 +57,21 @@ services:
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
+    # Cache policy. Without this, index.html is cached by the browser, so a
+    # deploy ships new content-hashed assets that nobody loads — the stale HTML
+    # keeps pointing at the previous bundle. That produced several confusing
+    # "the change didn't deploy" reviews where the build was in fact correct.
+    #
+    # index.html must always be revalidated; the hashed assets under /assets/
+    # can be cached forever precisely because their filename changes whenever
+    # their content does.
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
     envVars:
       # Set after the backend's first deploy, once its real URL is known
       # (see deployment instructions) — e.g. https://clutsch-backend.onrender.com
