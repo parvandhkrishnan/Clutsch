@@ -77,7 +77,7 @@
   /* The Phase-3 back-compat alias block (--bg-base, --text-primary, --accent,
      --glass-*, --gauge-* …) has been deleted. Every one of those names was
      verified to have zero remaining references in both CSS and JSX after the
-     Phase 4 page passes migrated them onto the --color-*/--priority-* tokens
+     Phase 4 page passes migrated them onto the --color- and --priority- tokens
      above. Two of them (--glass-fill, --glass-border) additionally had to go
      before the glass work, because in the new material system those names mean
      translucent surfaces, not the opaque colours they aliased here. */
