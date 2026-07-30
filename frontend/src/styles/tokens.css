@@ -67,9 +67,15 @@
     --surface-2: oklch(95%   0.012 240);
     --surface-3: oklch(92%   0.016 240);
 
+    /* Measured against both the white plate and the brightest bloom, since
+       captions do end up directly on the field. Worst case (bloom) in
+       parentheses: 16.4 (12.5) / 10.1 (7.7) / 6.2 (4.7) — all clear AA 4.5
+       for small text. text-3 was 62%, which measured 3.64 on the plate and
+       2.78 on the field: a real failure, not a theoretical one. Pulling it to
+       49% forced text-2 down to 38% to keep the three tones distinguishable. */
     --text-1: oklch(24% 0.022 255);
-    --text-2: oklch(47% 0.020 250);
-    --text-3: oklch(62% 0.018 248);
+    --text-2: oklch(38% 0.021 250);
+    --text-3: oklch(49% 0.020 248);
 
     --border-1: oklch(90% 0.014 240);
     --border-2: oklch(83% 0.018 240);
@@ -128,9 +134,12 @@
     --surface-2: oklch(24% 0.028 254);
     --surface-3: oklch(29% 0.030 252);
 
+    /* Same measurement, dark. Plate (brightest bloom) in parentheses:
+       16.5 (12.8) / 9.9 (7.7) / 6.4 (5.0). text-3 was 62%, which passed on
+       the plate at 5.09 but dropped to 3.96 over the bloom; 68% clears both. */
     --text-1: oklch(96% 0.006 250);
-    --text-2: oklch(78% 0.012 250);
-    --text-3: oklch(62% 0.014 250);
+    --text-2: oklch(80% 0.012 250);
+    --text-3: oklch(68% 0.014 250);
 
     --border-1: oklch(30% 0.028 252);
     --border-2: oklch(39% 0.032 250);
