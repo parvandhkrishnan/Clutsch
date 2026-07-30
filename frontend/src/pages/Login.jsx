@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from '../components/ThemeToggle';
+import LiquidButton from '../components/LiquidButton';
 import { LogIn, Loader2, UserPlus, ArrowRight, Zap, CheckCircle2 } from 'lucide-react';
 
 const Login = () => {
@@ -134,9 +135,9 @@ const Login = () => {
                 <label className="text-label" style={{ color: 'var(--color-ink)' }}>Password</label>
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" />
               </div>
-              <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%', justifyContent: 'center' }} disabled={isSubmitting}>
+              <LiquidButton type="submit" style={{ width: '100%' }} disabled={isSubmitting}>
                 {isSubmitting ? <Loader2 size={18} className="spin" style={{ animation: 'spin 1s linear infinite' }} /> : <><LogIn size={18} /> Sign In</>}
-              </button>
+              </LiquidButton>
             </form>
           ) : (
             <form onSubmit={handleSignUp} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -156,9 +157,9 @@ const Login = () => {
                 <label className="text-label" style={{ color: 'var(--color-ink)' }}>Password</label>
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="At least 8 characters" />
               </div>
-              <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%', justifyContent: 'center' }} disabled={isSubmitting}>
+              <LiquidButton type="submit" style={{ width: '100%' }} disabled={isSubmitting}>
                 {isSubmitting ? <Loader2 size={18} className="spin" style={{ animation: 'spin 1s linear infinite' }} /> : <><UserPlus size={18} /> Create Account</>}
-              </button>
+              </LiquidButton>
             </form>
           )}
 

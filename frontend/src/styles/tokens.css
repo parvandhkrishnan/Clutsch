@@ -103,8 +103,18 @@
     --glass-shade:    oklch(45% 0.06 250 / 0.10);
     --glass-drop:     0 12px 40px oklch(45% 0.08 250 / 0.14);
     --glass-blur:     20px;
+    --blur-step:      20px;
     --glass-sat:      140%;
     --glass-contrast: 1;
+
+    /* Under-fill beneath the glass gradient on liquid buttons. */
+    --liquid-fill:       rgb(255 255 255 / 0.30);
+    --liquid-fill-brand: oklch(52% 0.180 248 / 0.88);
+
+    /* Feed rows: flat fills that ride on the blurred scroll container.
+       These must stay cheap — they repeat ~50 times. */
+    --row-fill:       rgb(255 255 255 / 0.55);
+    --row-fill-hover: rgb(255 255 255 / 0.85);
 
     /* Focus ring: two tones so it survives any part of a luminous field.
        A single colour cannot clear 3:1 against both the bright and dark
@@ -186,8 +196,15 @@
     --glass-shade:    rgb(255 255 255 / 0.12);
     --glass-drop:     0 18px 60px rgb(0 0 0 / 0.45);
     --glass-blur:     24px;
+    --blur-step:      24px;
     --glass-sat:      180%;
     --glass-contrast: 1.05;
+
+    --liquid-fill:       rgb(255 255 255 / 0.10);
+    --liquid-fill-brand: oklch(62% 0.150 240 / 0.55);
+
+    --row-fill:       rgb(255 255 255 / 0.045);
+    --row-fill-hover: rgb(255 255 255 / 0.10);
 
     --focus-inner: oklch(98% 0.01 240);
     --focus-outer: rgb(0 0 0 / 0.70);

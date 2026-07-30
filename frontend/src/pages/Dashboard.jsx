@@ -149,7 +149,7 @@ const ActionableItem = ({ item, isSelected, onSelect, onToggleSelect, showCheckb
 const FocusPanel = ({ item, onArchive, onSnooze, onOpen, onDelegate, presence = [] }) => {
   if (!item) {
     return (
-      <div className="focus-panel card empty">
+      <div className="focus-panel empty">
         <Info size={48} />
         <h3>No Item Selected</h3>
         <p>Select an item from the list to view details and take action.</p>
@@ -157,8 +157,13 @@ const FocusPanel = ({ item, onArchive, onSnooze, onOpen, onDelegate, presence = 
     );
   }
 
+  // Shell and scroller are split deliberately. Safari is unreliable when
+  // position:sticky, overflow-y:auto and backdrop-filter land on the SAME
+  // element, and this panel is all three. The shell keeps sticky + glass +
+  // overflow:hidden (for the radius); the inner div does the scrolling.
   return (
-    <div className="focus-panel card">
+    <div className="focus-panel">
+      <div className="focus-panel-scroll">
       <div className="focus-header">
         <div className="focus-title-area">
           <div className="focus-source">
@@ -244,21 +249,22 @@ const FocusPanel = ({ item, onArchive, onSnooze, onOpen, onDelegate, presence = 
         </div>
       </div>
 
-      {item.metadata && (
-        <div className="focus-section">
-          <h3>Metadata</h3>
-          <div className="metadata-grid">
-            {Object.entries(item.metadata).map(([key, value]) => (
-              typeof value !== 'object' && value !== null && (
-                <div key={key} className="meta-item">
-                  <span className="meta-label">{key.replace(/_/g, ' ')}:</span>
-                  <span className="meta-value">{String(value)}</span>
-                </div>
-              )
-            ))}
+        {item.metadata && (
+          <div className="focus-section">
+            <h3>Metadata</h3>
+            <div className="metadata-grid">
+              {Object.entries(item.metadata).map(([key, value]) => (
+                typeof value !== 'object' && value !== null && (
+                  <div key={key} className="meta-item">
+                    <span className="meta-label">{key.replace(/_/g, ' ')}:</span>
+                    <span className="meta-value">{String(value)}</span>
+                  </div>
+                )
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

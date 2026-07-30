@@ -184,4 +184,317 @@
     .ground { background-image: none; }
     .ground::after { display: none; }
   }
+
+  /* ============================================================
+     GLASS
+     ============================================================
+     A web glassmorphism approximation — NOT Apple's Liquid Glass, which is a
+     platform material with no public web implementation. Built from
+     backdrop-filter + layered borders + highlight overlays.
+
+     Four things make it read as a real material rather than a translucent
+     rectangle, all visible in the reference:
+       1. the backdrop blur visibly SMOOTHS the grain behind it
+       2. a bright hairline along the top edge (light catching the rim)
+       3. a darker hairline along the bottom edge
+       4. a soft drop shadow separating it from the field
+
+     Rationed hard. See the whitelist below: glass belongs to chrome, never to
+     repeated content. Blurring 50 feed rows costs ~10M px/frame across 50
+     compositing layers; blurring their scroll container once costs ~1.8M px
+     on one layer and looks the same.
+     ============================================================ */
+
+  .glass {
+    position: relative;
+    isolation: isolate;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-panel);
+    background:
+      linear-gradient(135deg, var(--glass-tint-hi), var(--glass-tint-lo)),
+      var(--glass-base);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat)) contrast(var(--glass-contrast));
+            backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat)) contrast(var(--glass-contrast));
+    box-shadow:
+      inset 0  1px 0 var(--glass-specular),
+      inset 0 -1px 0 var(--glass-shade),
+      var(--glass-drop);
+  }
+
+  /* Inner 1px ring. Sits inside the border so the edge reads as thickness
+     rather than as a drawn outline. */
+  .glass::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    border-radius: inherit;
+    border: 1px solid var(--glass-inner);
+    pointer-events: none;
+  }
+
+  /* Tier 1 — chrome. Heaviest blur, least transparent, recedes. */
+  .glass--chrome {
+    --glass-blur: calc(var(--blur-step) * 1.4);
+    border-radius: 0;
+  }
+
+  /* Tier 2 — panel. Floating sheet: more drop, more specular. */
+  .glass--panel {
+    border-radius: var(--radius-panel);
+  }
+
+  /* ---------- LIQUID BUTTON ------------------------------- */
+  /*
+    The reference: a glass pill with a bright top rim, a soft shadow, and a
+    specular hotspot. --px/--py are written by useLiquidPointer; --pa fades the
+    hotspot in and out.
+
+    min-height 44px is load-bearing, not styling — it keeps this effect on
+    large buttons (where the repaint area is trivial and the brief asked for
+    it) and off chips and rows, where a pointer-tracked radial gradient would
+    repaint constantly.
+  */
+  .btn-liquid {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-xl);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-pill);
+    background:
+      linear-gradient(135deg, var(--glass-tint-hi), var(--glass-tint-lo)),
+      var(--liquid-fill);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+            backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+    box-shadow:
+      inset 0  1px 0 var(--glass-specular),
+      inset 0 -1px 0 var(--glass-shade),
+      var(--glass-drop);
+    color: var(--text-1);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 550;
+    cursor: pointer;
+    transition: transform var(--dur-fast) var(--ease-out),
+                border-color var(--dur-fast) var(--ease-out);
+  }
+
+  /* Pointer-tracked specular. Only opacity transitions — transitioning the
+     position would make the highlight lag the cursor, which reads as broken
+     rather than smooth. (Also why --px/--py are NOT registered via @property:
+     registering them would make them animatable.) */
+  .btn-liquid::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(
+      18ch circle at var(--px, 50%) var(--py, 50%),
+      var(--glass-specular), transparent 66%);
+    opacity: var(--pa, 0);
+    transition: opacity 220ms var(--ease-out);
+  }
+
+  .btn-liquid:active { transform: translateY(1px); }
+
+  /* Brand-tinted variant for primary actions. The neutral glass alone does
+     not read as "primary" on a colourless dark field. */
+  .btn-liquid--brand {
+    --liquid-fill: var(--liquid-fill-brand);
+    border-color: var(--brand-500);
+  }
+
+  /* Touch and reduced-motion: no cursor to track, so the hotspot becomes a
+     centred bloom on press. */
+  @media (hover: none), (prefers-reduced-motion: reduce) {
+    .btn-liquid::before {
+      --px: 50%; --py: 50%;
+      transition: opacity 120ms var(--ease-out);
+    }
+    .btn-liquid:active::before { opacity: 0.65; }
+  }
+
+  /* ---------- WHERE GLASS IS ALLOWED ---------------------- */
+  /*
+    The complete whitelist. Everything here is fixed, sticky, or a scroll
+    container — never a repeated element. Adding to this list without checking
+    the frame budget is how a glass system starts to jank.
+  */
+  .sidebar,
+  .bulk-action-bar {
+    background:
+      linear-gradient(135deg, var(--glass-tint-hi), var(--glass-tint-lo)),
+      var(--glass-base);
+    -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 1.3)) saturate(var(--glass-sat));
+            backdrop-filter: blur(calc(var(--glass-blur) * 1.3)) saturate(var(--glass-sat));
+    border-color: var(--glass-border);
+    box-shadow: inset 0 1px 0 var(--glass-specular), var(--glass-drop);
+  }
+
+  .modal-card,
+  .focus-panel,
+  .toast {
+    background:
+      linear-gradient(135deg, var(--glass-tint-hi), var(--glass-tint-lo)),
+      var(--glass-base);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+            backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+    border: 1px solid var(--glass-border);
+    box-shadow:
+      inset 0  1px 0 var(--glass-specular),
+      inset 0 -1px 0 var(--glass-shade),
+      var(--glass-drop);
+  }
+
+  /* Sticky + glass + clipped. The scrolling moved to the inner element. */
+  .focus-panel {
+    position: sticky;
+    top: var(--space-lg);
+    max-height: calc(100vh - 2 * var(--space-lg));
+    overflow: hidden;
+    border-radius: var(--radius-panel);
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .focus-panel-scroll {
+    overflow-y: auto;
+    padding: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    /* Contain scroll chaining, but NOT contain:paint — that would create a
+       new backdrop root and flatten the parent's glass. */
+    overscroll-behavior: contain;
+  }
+  .focus-panel.empty {
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    padding: var(--space-lg);
+    color: var(--text-3);
+    text-align: center;
+    gap: var(--space-xs);
+  }
+
+  /* The feed: blur the CONTAINER once, not the 50 rows inside it. */
+  .items-scroll {
+    background:
+      linear-gradient(135deg, var(--glass-tint-hi), var(--glass-tint-lo)),
+      var(--glass-base);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+            backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-card);
+    padding: var(--space-2xs);
+  }
+
+  /* Rows ride on top of that blurred plate with no blur of their own. */
+  .actionable-item {
+    background: var(--row-fill);
+    border: 1px solid transparent;
+    -webkit-backdrop-filter: none;
+            backdrop-filter: none;
+    box-shadow: none;
+  }
+  .actionable-item:hover { background: var(--row-fill-hover); }
+  .actionable-item.selected {
+    background: var(--row-fill-hover);
+    border-color: var(--brand-500);
+    box-shadow: none;
+  }
+
+  /* Segmented controls — the reference image's exact shape. The active
+     segment is the raised "thumb": lighter, its own rim, slightly proud. */
+  .view-toggle {
+    background: var(--glass-base);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+            backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 1px 0 var(--glass-specular), var(--shadow-whisper);
+    padding: 3px;
+    gap: 2px;
+  }
+  .view-toggle .toggle-btn { border-radius: var(--radius-pill); }
+  .view-toggle .toggle-btn.active {
+    background: var(--glass-tint-hi);
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 1px 0 var(--glass-specular), var(--shadow-whisper);
+    color: var(--text-1);
+  }
+
+  .theme-toggle {
+    background: var(--glass-base);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+            backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+    border-color: var(--glass-border);
+    box-shadow: inset 0 1px 0 var(--glass-specular), var(--shadow-whisper);
+  }
+  .theme-toggle:hover { background: var(--glass-tint-lo); }
+
+  /* ---------- FALLBACKS ----------------------------------- */
+  /*
+    Four of them, because backdrop-filter degrades badly and unevenly.
+    prefers-reduced-transparency in particular is NOT implemented in Firefox,
+    which is why there is also a user-facing toggle writing
+    [data-transparency="reduce"].
+  */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass, .btn-liquid, .sidebar, .modal-card, .focus-panel, .toast,
+    .items-scroll, .bulk-action-bar, .view-toggle, .theme-toggle {
+      background: var(--surface-1);
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .glass, .btn-liquid, .sidebar, .modal-card, .focus-panel, .toast,
+    .items-scroll, .bulk-action-bar, .view-toggle, .theme-toggle {
+      background: var(--surface-1);
+      -webkit-backdrop-filter: none;
+              backdrop-filter: none;
+    }
+    .btn-liquid::before { display: none; }
+  }
+
+  :root[data-transparency="reduce"] .glass,
+  :root[data-transparency="reduce"] .btn-liquid,
+  :root[data-transparency="reduce"] .sidebar,
+  :root[data-transparency="reduce"] .modal-card,
+  :root[data-transparency="reduce"] .focus-panel,
+  :root[data-transparency="reduce"] .toast,
+  :root[data-transparency="reduce"] .items-scroll,
+  :root[data-transparency="reduce"] .bulk-action-bar,
+  :root[data-transparency="reduce"] .view-toggle,
+  :root[data-transparency="reduce"] .theme-toggle {
+    background: var(--surface-1);
+    -webkit-backdrop-filter: none;
+            backdrop-filter: none;
+  }
+  :root[data-transparency="reduce"] .btn-liquid::before { display: none; }
+
+  @media (prefers-contrast: more) {
+    .glass, .btn-liquid, .sidebar, .modal-card, .focus-panel, .toast,
+    .items-scroll, .bulk-action-bar, .view-toggle, .theme-toggle {
+      background: var(--surface-1);
+      border-color: var(--text-2);
+    }
+  }
+
+  /* Windows High Contrast ignores backdrop-filter entirely and forces
+     backgrounds, so every glass panel collapses into one flat colour and the
+     layout dissolves. Restoring explicit borders is the fix. */
+  @media (forced-colors: active) {
+    .glass, .btn-liquid, .sidebar, .modal-card, .focus-panel, .toast,
+    .items-scroll, .bulk-action-bar, .view-toggle, .theme-toggle {
+      border: 1px solid CanvasText;
+    }
+    .glass::after, .btn-liquid::before { display: none; }
+  }
 }

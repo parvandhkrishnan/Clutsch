@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import IntegrationModal from '../components/IntegrationModal';
+import LiquidButton from '../components/LiquidButton';
 import { 
   Mail, 
   MessageCircle, 
@@ -72,9 +73,9 @@ const Onboarding = () => {
       <p className="text-body-l" style={{ color: 'var(--color-ink-2)', maxWidth: '440px' }}>
         Let's clear the noise. We'll help you focus on high-impact work by aggregating and prioritizing your communications.
       </p>
-      <button className="btn btn-primary btn-lg" onClick={handleNext}>
+      <LiquidButton onClick={handleNext}>
         Get Started <ArrowRight size={18} />
-      </button>
+      </LiquidButton>
     </div>
   );
 
@@ -172,9 +173,9 @@ const Onboarding = () => {
           </div>
           <h2 style={{ fontSize: '24px' }}>You're Ready to Focus</h2>
           <p className="text-body" style={{ color: 'var(--color-ink-2)' }}>We've identified 12 high-priority items that need your attention.</p>
-          <button className="btn btn-primary btn-lg" onClick={() => navigate('/dashboard?tour=true')}>
+          <LiquidButton onClick={() => navigate('/dashboard?tour=true')}>
             Start Focusing <ArrowRight size={18} />
-          </button>
+          </LiquidButton>
         </>
       )}
     </div>

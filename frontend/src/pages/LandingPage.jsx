@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import ThemeToggle from '../components/ThemeToggle';
+import LiquidButton from '../components/LiquidButton';
 import { CheckCircle2, ArrowRight, Zap, Layers, Target, Shield } from 'lucide-react';
 
 const FeatureCard = ({ icon: Icon, title, description }) => (
@@ -52,7 +53,7 @@ export default function LandingPage() {
           <h1 className="text-display-xl" style={{ color: 'var(--color-ink)' }}>Clear the Noise.<br />Focus on What Matters.</h1>
           <p className="text-body-l" style={{ color: 'var(--color-ink-2)', maxWidth: '480px' }}>Clutsch aggregates your emails, Slack messages, and tasks, then uses AI to rank them by urgency.</p>
           <div className="hero-actions">
-            <button onClick={() => navigate('/login?mode=signup')} className="btn btn-primary btn-lg">Start Free Trial <ArrowRight size={18} /></button>
+            <LiquidButton onClick={() => navigate('/login?mode=signup')}>Start Free Trial <ArrowRight size={18} /></LiquidButton>
             <p className="text-caption" style={{ color: 'var(--color-ink-3)' }}>No credit card required. 14-day free trial.</p>
           </div>
         </div>
