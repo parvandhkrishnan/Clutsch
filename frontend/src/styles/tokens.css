@@ -55,10 +55,15 @@
        narrow band means the composite luminance behind any glass surface is
        bounded, so worst-case contrast is computable once instead of being
        audited per page. */
-    --field-base:  oklch(96% 0.012 235);
-    --field-bloom-a: oklch(90% 0.070 200);
-    --field-bloom-b: oklch(91% 0.060 245);
-    --field-bloom-c: oklch(93% 0.045 265);
+    /* Same measurement applied here. Light was the worse offender: chroma
+       0.070 rendered as rgb(166,237,240), a 74-point red-to-blue spread —
+       markedly more cyan than dark ever was. Pulled to 0.014 (≈14 points) so
+       toggling themes doesn't jump from grey to cyan. Light needs slightly
+       more chroma than dark to register at all against a 96% base. */
+    --field-base:  oklch(96% 0.006 235);
+    --field-bloom-a: oklch(90% 0.014 200);
+    --field-bloom-b: oklch(91% 0.013 245);
+    --field-bloom-c: oklch(93% 0.011 265);
     --grain-alpha: 0.030;
 
     /* Opaque content plates. Text lives here, never directly on glass. */
@@ -134,10 +139,18 @@
        overall impression is "dark grey with a cool glow" rather than "blue" —
        on a neutral base the blooms read stronger than they did on navy, so
        the same intensity would have looked more blue, not less. */
+    /* Bloom chroma is set by measurement, not by eye. At these lightnesses a
+       "modest-sounding" chroma is not modest: 0.055 rendered as rgb(0,44,46),
+       i.e. the red channel crushed to zero and a 46-point red-to-blue spread,
+       which reads as saturated teal across most of the viewport. 0.010 lands
+       at a 7-8 point spread, which reads as grey with the faintest cool cast.
+
+       Lightness does the work instead — blooms at 22-28% against a 14% base
+       give glass a luminance gradient to refract without any visible hue. */
     --field-base:  oklch(14% 0.004 260);
-    --field-bloom-a: oklch(26% 0.055 200);
-    --field-bloom-b: oklch(24% 0.050 240);
-    --field-bloom-c: oklch(21% 0.045 265);
+    --field-bloom-a: oklch(28% 0.010 200);
+    --field-bloom-b: oklch(25% 0.009 240);
+    --field-bloom-c: oklch(22% 0.008 265);
     --grain-alpha: 0.045;
 
     /* Lightness values are unchanged from the measured, AA-passing ramp;
