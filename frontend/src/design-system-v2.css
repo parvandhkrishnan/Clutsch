@@ -559,7 +559,12 @@ a:hover { color: var(--color-accent-hover); }
 .auth-container { display: flex; min-height: 100vh; }
 .auth-form-side { flex: 1; display: flex; align-items: center; justify-content: center; padding: var(--space-xl); background: var(--color-paper); }
 .auth-form { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: var(--space-lg); }
-.auth-hero-side { flex: 1; display: flex; align-items: center; justify-content: center; padding: var(--space-2xl); background: var(--color-ink); }
+/* Was `background: var(--color-ink)` with hardcoded white text on top. That
+   assumed ink is always dark — which stopped being true the moment a dark
+   theme existed, giving near-white text on a near-white panel at 1.12:1.
+   Transparent instead, so the luminous field shows through and the panel
+   inherits normal themed text tones. */
+.auth-hero-side { flex: 1; display: flex; align-items: center; justify-content: center; padding: var(--space-2xl); background: transparent; }
 @media (max-width: 900px) { .auth-container { flex-direction: column; } .auth-hero-side { display: none; } }
 
 /* ===== LANDING PAGE ===== */

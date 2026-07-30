@@ -141,6 +141,43 @@
     background: transparent;
   }
 
+  /* ---------- THEME TOGGLE -------------------------------- */
+  .theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    min-height: 40px;
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-2);
+    background: var(--surface-1);
+    color: var(--text-2);
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out),
+                color var(--dur-fast) var(--ease-out);
+  }
+  .theme-toggle:hover { background: var(--surface-2); color: var(--text-1); }
+
+  /* Icon-only needs to stay a square 40px target, not collapse to the glyph. */
+  .theme-toggle--icon {
+    width: 40px;
+    padding: 0;
+    flex-shrink: 0;
+  }
+
+  /* Floated over the auth page, which has no chrome to sit in. */
+  .auth-theme-toggle {
+    position: absolute;
+    top: var(--space-lg);
+    right: var(--space-lg);
+    z-index: var(--z-raised);
+  }
+  .auth-container { position: relative; }
+
   @media (prefers-reduced-transparency: reduce) {
     /* Flatten to a single solid tone: the blooms exist to give glass
        something to refract, and there is no glass in this mode. */

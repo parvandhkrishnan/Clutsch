@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ThemeToggle from '../components/ThemeToggle';
 import { LogIn, Loader2, UserPlus, ArrowRight, Zap, CheckCircle2 } from 'lucide-react';
 
 const Login = () => {
@@ -97,6 +98,8 @@ const Login = () => {
 
   return (
     <div className="auth-container">
+      {/* Public route: no sidebar here, so the theme switch needs its own home. */}
+      <ThemeToggle variant="pill" className="auth-theme-toggle" />
       <div className="auth-form-side">
         <div className="auth-form">
           {/* Logo */}
@@ -116,7 +119,7 @@ const Login = () => {
           </div>
 
           {error && (
-            <div style={{ padding: '12px 16px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-input)', color: 'var(--error)', fontSize: '14px' }}>
+            <div style={{ padding: '12px 16px', background: 'var(--chip-urgent)', border: '1px solid var(--error)', borderRadius: 'var(--radius-input)', color: 'var(--error)', fontSize: '14px' }}>
               {error}
             </div>
           )}
@@ -220,19 +223,19 @@ const Login = () => {
       <div className="auth-hero-side">
         {mode === 'signin' ? (
           <div style={{ maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '24px', textAlign: 'center' }}>
-            <div style={{ width: '72px', height: '72px', borderRadius: 'var(--radius-panel)', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
-              <Zap size={36} style={{ color: '#fff' }} />
+            <div style={{ width: '72px', height: '72px', borderRadius: 'var(--radius-panel)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+              <Zap size={36} style={{ color: 'var(--brand-500)' }} />
             </div>
-            <h1 style={{ color: '#fff', fontSize: '36px' }}>Clear the Noise.<br />Focus on What Matters.</h1>
-            <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '16px', lineHeight: 1.6 }}>
+            <h1 style={{ color: 'var(--text-1)', fontSize: '36px' }}>Clear the Noise.<br />Focus on What Matters.</h1>
+            <p style={{ color: 'var(--text-2)', fontSize: '16px', lineHeight: 1.6 }}>
               Clutsch aggregates your emails, messages, and tasks, then uses AI to rank them by urgency. 
               Stop context-switching. Start doing your best work.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', marginTop: '8px' }}>
               {['Connect Gmail, Slack, Jira & more', 'AI-powered urgency scoring', 'Enterprise-grade privacy'].map((item, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'rgba(255,255,255,0.9)', fontSize: '14px' }}>
-                  <div style={{ width: '20px', height: '20px', borderRadius: 'var(--radius-pill)', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <ArrowRight size={12} style={{ color: '#fff' }} />
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-2)', fontSize: '14px' }}>
+                  <div style={{ width: '20px', height: '20px', borderRadius: 'var(--radius-pill)', background: 'var(--surface-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <ArrowRight size={12} style={{ color: 'var(--brand-500)' }} />
                   </div>
                   {item}
                 </div>
@@ -241,19 +244,19 @@ const Login = () => {
           </div>
         ) : (
           <div style={{ maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '24px', textAlign: 'center' }}>
-            <div style={{ width: '72px', height: '72px', borderRadius: 'var(--radius-panel)', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
-              <UserPlus size={36} style={{ color: '#fff' }} />
+            <div style={{ width: '72px', height: '72px', borderRadius: 'var(--radius-panel)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+              <UserPlus size={36} style={{ color: 'var(--brand-500)' }} />
             </div>
-            <h1 style={{ color: '#fff', fontSize: '36px' }}>Start Your Free Trial.<br />No Credit Card Needed.</h1>
-            <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '16px', lineHeight: 1.6 }}>
+            <h1 style={{ color: 'var(--text-1)', fontSize: '36px' }}>Start Your Free Trial.<br />No Credit Card Needed.</h1>
+            <p style={{ color: 'var(--text-2)', fontSize: '16px', lineHeight: 1.6 }}>
               Join thousands of professionals who use Clutsch to cut through the noise. 
               Set up in under 2 minutes — connect your tools and let AI do the sorting.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', marginTop: '8px' }}>
               {['14-day free trial, full access to Pro', 'Connect up to 6 integrations', 'Cancel anytime, no questions asked'].map((item, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'rgba(255,255,255,0.9)', fontSize: '14px' }}>
-                  <div style={{ width: '20px', height: '20px', borderRadius: 'var(--radius-pill)', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <CheckCircle2 size={12} style={{ color: '#fff' }} />
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-2)', fontSize: '14px' }}>
+                  <div style={{ width: '20px', height: '20px', borderRadius: 'var(--radius-pill)', background: 'var(--surface-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <CheckCircle2 size={12} style={{ color: 'var(--brand-500)' }} />
                   </div>
                   {item}
                 </div>

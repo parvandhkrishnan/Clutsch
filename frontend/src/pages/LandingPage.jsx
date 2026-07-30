@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import ThemeToggle from '../components/ThemeToggle';
 import { CheckCircle2, ArrowRight, Zap, Layers, Target, Shield } from 'lucide-react';
 
 const FeatureCard = ({ icon: Icon, title, description }) => (
@@ -36,7 +37,8 @@ export default function LandingPage() {
     <div className="landing-container">
       <nav className="landing-nav">
         <div className="logo"><div className="logo-icon">C</div><span className="logo-text">Clutsch</span></div>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <ThemeToggle variant="icon" />
           <button onClick={() => scrollTo('features')} className="btn btn-ghost btn-sm">Features</button>
           <button onClick={() => scrollTo('pricing')} className="btn btn-ghost btn-sm">Pricing</button>
           <button onClick={() => navigate('/login')} className="btn btn-secondary btn-sm">Login</button>
