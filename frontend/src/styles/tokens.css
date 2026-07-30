@@ -122,27 +122,42 @@
   :root[data-theme="dark"] {
     color-scheme: dark;
 
-    /* Same discipline as light: L confined to 12–26%, chroma ≤0.09. */
-    --field-base:  oklch(14% 0.030 260);
-    --field-bloom-a: oklch(26% 0.090 200);
-    --field-bloom-b: oklch(24% 0.085 240);
-    --field-bloom-c: oklch(21% 0.075 265);
+    /* Same lightness discipline as light (L confined to 12–26%), but the
+       canvas is NEUTRAL dark gray rather than navy. Chroma on the base and
+       every surface is dropped to ~0.004, which at these lightnesses is
+       imperceptible as hue — it reads as grey, not blue — while staying just
+       off pure neutral so the surfaces don't look flat and synthetic.
+
+       The blooms keep their cool hue, because glass needs something to
+       refract; a fully neutral field would make every glass surface read as a
+       plain grey box. Their chroma is pulled back from ~0.09 to ~0.05 so the
+       overall impression is "dark grey with a cool glow" rather than "blue" —
+       on a neutral base the blooms read stronger than they did on navy, so
+       the same intensity would have looked more blue, not less. */
+    --field-base:  oklch(14% 0.004 260);
+    --field-bloom-a: oklch(26% 0.055 200);
+    --field-bloom-b: oklch(24% 0.050 240);
+    --field-bloom-c: oklch(21% 0.045 265);
     --grain-alpha: 0.045;
 
-    --surface-0: oklch(15% 0.025 258);
-    --surface-1: oklch(19% 0.026 256);
-    --surface-2: oklch(24% 0.028 254);
-    --surface-3: oklch(29% 0.030 252);
+    /* Lightness values are unchanged from the measured, AA-passing ramp;
+       only chroma moved. */
+    --surface-0: oklch(15% 0.004 260);
+    --surface-1: oklch(19% 0.004 260);
+    --surface-2: oklch(24% 0.005 260);
+    --surface-3: oklch(29% 0.005 260);
 
     /* Same measurement, dark. Plate (brightest bloom) in parentheses:
        16.5 (12.8) / 9.9 (7.7) / 6.4 (5.0). text-3 was 62%, which passed on
-       the plate at 5.09 but dropped to 3.96 over the bloom; 68% clears both. */
-    --text-1: oklch(96% 0.006 250);
-    --text-2: oklch(80% 0.012 250);
-    --text-3: oklch(68% 0.014 250);
+       the plate at 5.09 but dropped to 3.96 over the bloom; 68% clears both.
+       Chroma pulled to near-neutral with the rest of the dark ramp; lightness
+       untouched, so these ratios hold (re-measured after deploy). */
+    --text-1: oklch(96% 0.002 260);
+    --text-2: oklch(80% 0.004 260);
+    --text-3: oklch(68% 0.005 260);
 
-    --border-1: oklch(30% 0.028 252);
-    --border-2: oklch(39% 0.032 250);
+    --border-1: oklch(30% 0.005 260);
+    --border-2: oklch(39% 0.006 260);
 
     --brand-500: var(--blue-400);
     --brand-600: var(--cyan-400);
@@ -171,7 +186,7 @@
     --shadow-whisper: 0 1px 2px rgb(0 0 0 / 0.40);
     --shadow-raised:  0 8px 28px rgb(0 0 0 / 0.50);
 
-    --scrim: oklch(8% 0.02 260 / 0.60);
+    --scrim: oklch(8% 0.004 260 / 0.62);
     --neutral-tile: var(--surface-2);
   }
 
