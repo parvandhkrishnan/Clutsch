@@ -214,9 +214,11 @@ const Login = () => {
             </p>
           </div>
 
-          <div style={{ textAlign: 'center', paddingTop: '16px', borderTop: '1px solid var(--color-rule)' }}>
-            <p className="text-caption" style={{ color: 'var(--color-ink-3)' }}>Demo: admin / admin123</p>
-          </div>
+          {/* The old "Demo: admin / admin123" hint was removed: it was wrong on
+              any real deployment (the admin user is seeded from the
+              ADMIN_PASSWORD env var, see backend/auth/models.py), and printing
+              working credentials on a public login page is not something to
+              ship regardless. */}
         </div>
       </div>
 
