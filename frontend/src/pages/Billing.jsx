@@ -9,10 +9,12 @@ import {
 } from 'lucide-react';
 import api from '../utils/api';
 import { showToast } from '../utils/toast';
+import { PLANS, planCta } from '../constants/plans';
 
-const PlanCard = ({ title, price, features, highlighted, cta, isCustom, current, onUpgrade, loading }) => (
-  <div className={`card billing-plan-card glass-effect ${highlighted ? 'enterprise-highlight' : ''}`}>
-    {highlighted && <div className="enterprise-badge">RECOMMENDED</div>}
+// No `highlighted` tier. The SME card used to carry a RECOMMENDED badge;
+// removed per review, so no plan is singled out.
+const PlanCard = ({ title, price, features, cta, isCustom, current, onUpgrade, loading }) => (
+  <div className="card billing-plan-card glass-effect">
     <div className="plan-header">
       <h3>{title}</h3>
       <div className="plan-price">
@@ -36,7 +38,7 @@ const PlanCard = ({ title, price, features, highlighted, cta, isCustom, current,
       ))}
     </ul>
     <button
-      className={`btn plan-btn ${current ? 'current-btn' : (highlighted ? 'btn-primary' : 'btn-secondary')}`}
+      className={`btn plan-btn ${current ? 'current-btn' : 'btn-secondary'}`}
       onClick={() => !current && onUpgrade(title)}
       disabled={current || loading}
     >
@@ -65,37 +67,7 @@ const UsageBar = ({ label, current, total, colorClass }) => {
   );
 };
 
-const PLAN_FEATURES = {
-  Free: [
-    '2 Integrations',
-    '50 Messages/mo',
-    'AI Priority Scoring',
-    'Basic Support'
-  ],
-  Pro: [
-    'All Integrations',
-    'Unlimited Messages',
-    'AI Priority Scoring',
-    'Quick Actions',
-    'Advanced Search',
-    'Mobile Access'
-  ],
-  SME: [
-    'Everything in Pro',
-    'Up to 20 Users',
-    'Team Shared Feeds',
-    'Delegation Workflow',
-    'Priority Support'
-  ],
-  Enterprise: [
-    'Everything in SME',
-    'Unlimited Users',
-    'Custom Integrations',
-    'SAML / SSO',
-    'Dedicated Manager',
-    'Analytics'
-  ]
-};
+// PLAN_FEATURES moved to constants/plans.js, shared with the landing page.
 
 const Billing = () => {
   const [loadingPlan, setLoadingPlan] = useState(null);
@@ -174,35 +146,17 @@ const Billing = () => {
 
   const currentPlanName = billing?.plan || null;
 
-  const plans = [
-    {
-      title: 'Free',
-      price: '0',
-      cta: 'Downgrade',
-      features: PLAN_FEATURES.Free
-    },
-    {
-      title: 'Pro',
-      price: '12',
-      cta: 'Get Pro',
-      features: PLAN_FEATURES.Pro
-    },
-    {
-      title: 'SME',
-      price: 'Custom',
-      isCustom: true,
-      cta: 'Contact Sales',
-      highlighted: true,
-      features: PLAN_FEATURES.SME
-    },
-    {
-      title: 'Enterprise',
-      price: 'Custom',
-      isCustom: true,
-      cta: 'Contact Sales',
-      features: PLAN_FEATURES.Enterprise
-    }
-  ];
+  // Shared with the landing page's pricing grid so the two can't drift.
+  // No tier is `highlighted`: the SME card previously carried a RECOMMENDED
+  // badge, removed per review.
+  const plans = PLANS.map((plan) => ({
+    title: plan.name,
+    price: plan.price,
+    isFree: plan.isFree,
+    isCustom: plan.isCustom,
+    features: plan.features,
+    cta: planCta(plan, { context: 'billing' }),
+  }));
 
   const usage = billing?.usage || { active_integrations: 0, team_members: 0, ai_items_processed: 0, smart_responses: 0 };
   const limits = billing?.limits || { active_integrations: 0, team_members: 0, ai_items_processed: 0, smart_responses: 0 };

@@ -3,16 +3,17 @@ import ThemeToggle from '../components/ThemeToggle';
 import LiquidButton from '../components/LiquidButton';
 import SourceLogo from '../components/SourceLogo';
 import { INTEGRATIONS } from '../constants/integrations';
+import { PLANS, planCta } from '../constants/plans';
 import { CheckCircle2, ArrowRight, Zap, Layers, Target, Shield } from 'lucide-react';
 
 const FeatureCard = ({ icon: Icon, title, description }) => (
   <div className="feature-card"><div className="icon"><Icon size={24} /></div><h3>{title}</h3><p className="text-body" style={{ color: 'var(--color-ink-2)' }}>{description}</p></div>
 );
 
-const PricingCard = ({ tier, price, features, cta, isFree, onClick }) => (
+const PricingCard = ({ tier, price, features, cta, isFree, isCustom, onClick }) => (
   <div className="pricing-card">
     <div className="tier">{tier}</div>
-    <div className="price">{isFree ? <span style={{ fontSize: '36px', fontWeight: 700 }}>Free</span> : price === 'Custom' ? <span style={{ fontSize: '28px', fontWeight: 700 }}>Custom</span> : <><span className="currency">$</span><span className="amount">{price}</span><span className="period">/mo</span></>}</div>
+    <div className="price">{isFree ? <span className="amount">Free</span> : isCustom ? <span className="amount">Custom</span> : <><span className="currency">$</span><span className="amount">{price}</span><span className="period">/mo</span></>}</div>
     <ul>{features.map((f, i) => (<li key={i}><CheckCircle2 size={16} className="check-icon" />{f}</li>))}</ul>
     <button className="btn btn-secondary" style={{ marginTop: 'auto' }} onClick={onClick}>{cta}</button>
   </div>
@@ -114,10 +115,19 @@ export default function LandingPage() {
           <p className="text-body-l" style={{ color: 'var(--color-ink-2)' }}>Choose the plan that fits your scale.</p>
         </div>
         <div className="pricing-grid">
-          <PricingCard tier="Free" isFree cta="Get Started Free" features={["2 Integrations", "50 Messages/mo", "AI Priority Scoring", "Basic Support"]} onClick={() => navigate('/login?mode=signup')} />
-          <PricingCard tier="Pro" price="12" cta="Get Pro" features={["All Integrations", "Unlimited Messages", "AI Priority Scoring", "Quick Actions", "Advanced Search", "Mobile Access"]} onClick={() => navigate('/login?mode=signup')} />
-          <PricingCard tier="SME" price="Custom" cta="Contact Sales" features={["Everything in Pro", "Up to 20 Users", "Team Shared Feeds", "Delegation Workflow", "Priority Support"]} onClick={() => navigate('/login?mode=signup')} />
-          <PricingCard tier="Enterprise" price="Custom" cta="Contact Sales" features={["Everything in SME", "Unlimited Users", "Custom Integrations", "SAML / SSO", "Dedicated Manager", "Analytics"]} onClick={() => navigate('/login?mode=signup')} />
+          {/* Shared with the Billing page so the two can't drift. */}
+          {PLANS.map((plan) => (
+            <PricingCard
+              key={plan.id}
+              tier={plan.name}
+              price={plan.price}
+              isFree={plan.isFree}
+              isCustom={plan.isCustom}
+              features={plan.features}
+              cta={planCta(plan, { context: 'marketing' })}
+              onClick={() => navigate('/login?mode=signup')}
+            />
+          ))}
         </div>
       </section>
 
