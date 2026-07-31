@@ -3,13 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import IntegrationModal from '../components/IntegrationModal';
+import SourceLogo from '../components/SourceLogo';
 import LiquidButton from '../components/LiquidButton';
-import { 
-  Mail, 
-  MessageCircle, 
-  ArrowRight, 
-  CheckCircle2, 
-  Loader2, 
+import {
+  ArrowRight,
+  CheckCircle2,
+  Loader2,
   Zap,
   Target,
   Users
@@ -87,15 +86,14 @@ const Onboarding = () => {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', maxWidth: '480px', margin: '0 auto' }}>
         {[
-          { id: 'gmail', name: 'Gmail', icon: Mail },
-          { id: 'slack', name: 'Slack', icon: MessageCircle },
+          { id: 'gmail', name: 'Gmail' },
+          { id: 'slack', name: 'Slack' },
         ].map((item) => {
           const isConnected = integrations.includes(item.id);
-          const Icon = item.icon;
           return (
             <div key={item.id}
               onClick={() => {
-                setSelectedIntegration({ id: item.id, name: item.name, icon: Icon });
+                setSelectedIntegration({ id: item.id, name: item.name });
                 setIsConnectModalOpen(true);
               }}
               style={{ 
@@ -111,8 +109,8 @@ const Onboarding = () => {
                 transition: 'all 200ms ease-out',
               }}
             >
-              <div style={{ width: '56px', height: '56px', borderRadius: 'var(--radius-input)', background: isConnected ? 'var(--color-accent)' : 'var(--color-paper-3)', color: isConnected ? '#fff' : 'var(--color-ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Icon size={28} />
+              <div style={{ width: '56px', height: '56px', borderRadius: 'var(--radius-input)', background: 'var(--color-paper-3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <SourceLogo source={item.id} size={28} />
               </div>
               <h3 style={{ fontSize: '16px' }}>{item.name}</h3>
               {isConnected ? (

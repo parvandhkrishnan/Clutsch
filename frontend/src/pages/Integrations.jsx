@@ -2,11 +2,9 @@ import { useState, useEffect } from 'react';
 import api from '../utils/api';
 import IntegrationModal from '../components/IntegrationModal';
 import IntegrationSettingsModal from '../components/IntegrationSettingsModal';
+import SourceLogo from '../components/SourceLogo';
 import {
-  Mail,
-  MessageCircle,
   CheckCircle2,
-  Users,
   LayoutGrid,
   List,
   Settings,
@@ -14,11 +12,11 @@ import {
   Loader2
 } from 'lucide-react';
 
-const IntegrationCard = ({ id, name, icon: Icon, description, connected, isConnecting, isSyncing, onConnect, onSync, onManage }) => (
+const IntegrationCard = ({ id, name, description, connected, isConnecting, isSyncing, onConnect, onSync, onManage }) => (
   <div className={`integration-card card ${connected ? 'connected' : ''}`}>
     <div className="integration-header">
       <div className="integration-icon-bg">
-        <Icon size={24} />
+        <SourceLogo source={id} size={24} />
       </div>
       {connected && (
         <div className="connected-badge">
@@ -62,11 +60,11 @@ const IntegrationCard = ({ id, name, icon: Icon, description, connected, isConne
   </div>
 );
 
-const IntegrationRow = ({ id, name, icon: Icon, account, connected, lastSync, isSyncing, onSync, onManage }) => (
+const IntegrationRow = ({ id, name, account, connected, lastSync, isSyncing, onSync, onManage }) => (
   <div className="integration-row">
     <div className="integration-row-cell service">
       <div className="integration-icon-small">
-        <Icon size={20} />
+        <SourceLogo source={id} size={20} />
       </div>
       <span>{name}</span>
     </div>
@@ -116,13 +114,16 @@ const Integrations = () => {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [selectedIntegration, setSelectedIntegration] = useState(null);
 
+  // No `icon` field: SourceLogo resolves the real brand mark from the id.
+  // Previously every service carried a generic lucide glyph, which put the
+  // same icon on Gmail and Outlook, and on Slack and WhatsApp.
   const metadata = {
-    gmail: { name: 'Gmail', icon: Mail, description: 'Connect your personal or work Gmail account to prioritize emails.', account: 'john.doe@gmail.com' },
-    outlook: { name: 'Outlook', icon: Mail, description: 'Sync your Microsoft Outlook inbox for unified communication.', account: 'work@company.com' },
-    slack: { name: 'Slack', icon: MessageCircle, description: 'Identify urgent messages and threads across all your Slack channels.', account: 'Team Slack' },
-    teams: { name: 'MS Teams', icon: Users, description: 'Collaborate and prioritize messages from Microsoft Teams.', account: 'Work Teams' },
-    whatsapp: { name: 'WhatsApp', icon: MessageCircle, description: 'Stay on top of your WhatsApp chats with AI-driven priority.', account: '+123456789' },
-    jira: { name: 'Jira', icon: LayoutGrid, description: 'Track project updates and ticket priorities from Jira.', account: 'John Doe' },
+    gmail: { name: 'Gmail', description: 'Connect your personal or work Gmail account to prioritize emails.', account: 'john.doe@gmail.com' },
+    outlook: { name: 'Outlook', description: 'Sync your Microsoft Outlook inbox for unified communication.', account: 'work@company.com' },
+    slack: { name: 'Slack', description: 'Identify urgent messages and threads across all your Slack channels.', account: 'Team Slack' },
+    teams: { name: 'MS Teams', description: 'Collaborate and prioritize messages from Microsoft Teams.', account: 'Work Teams' },
+    whatsapp: { name: 'WhatsApp', description: 'Stay on top of your WhatsApp chats with AI-driven priority.', account: '+123456789' },
+    jira: { name: 'Jira', description: 'Track project updates and ticket priorities from Jira.', account: 'John Doe' },
   };
 
   const fetchIntegrations = async () => {

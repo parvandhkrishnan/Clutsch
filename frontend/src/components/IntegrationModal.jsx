@@ -1,3 +1,4 @@
+import SourceLogo from './SourceLogo';
 import { useState, useEffect } from 'react';
 import { X, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
@@ -56,7 +57,7 @@ const IntegrationModal = ({ isOpen, onClose, integration, onConnectSuccess }) =>
                 justifyContent: 'center',
                 margin: '0 auto 24px'
               }}>
-                <integration.icon size={48} color="var(--color-accent)" />
+                <SourceLogo source={integration.id} size={48} />
               </div>
               <p style={{ marginBottom: '24px', color: 'var(--color-ink-3)' }}>
                 Connect your {integration.name} account to start prioritizing your communications with AI.

@@ -1,19 +1,18 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
-import { 
-  User, 
-  Bell, 
-  Shield, 
-  Lock, 
-  Trash2, 
-  Mail, 
-  MessageCircle, 
-  Plus, 
-  X, 
-  Loader2,
-  LayoutGrid
+import {
+  User,
+  Bell,
+  Shield,
+  Lock,
+  Trash2,
+  Mail,
+  Plus,
+  X,
+  Loader2
 } from 'lucide-react';
+import SourceLogo from '../components/SourceLogo';
 import { showToast } from '../utils/toast';
 
 const Settings = () => {
@@ -186,15 +185,8 @@ const Settings = () => {
     }
   };
 
-  const getPlatformIcon = (platform) => {
-    switch (platform.toLowerCase()) {
-      case 'slack': return MessageCircle;
-      case 'gmail':
-      case 'outlook': return Mail;
-      case 'jira': return LayoutGrid;
-      default: return MessageCircle;
-    }
-  };
+  // Platform icons come from SourceLogo now — the previous switch returned a
+  // generic lucide glyph, so Gmail and Outlook shared one envelope.
 
   return (
     <div className="settings-page">
@@ -247,7 +239,7 @@ const Settings = () => {
                     <div key={`${platform}-${handle}`} className="contact-priority-item">
                       <div className="contact-info">
                         <div className="integration-icon-small">
-                          {React.createElement(getPlatformIcon(platform), { size: 16 })}
+                          <SourceLogo source={platform} size={16} />
                         </div>
                         <div>
                           <div className="contact-handle">{handle}</div>

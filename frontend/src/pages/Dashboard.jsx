@@ -1,21 +1,18 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Joyride } from 'react-joyride';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import DelegationModal from '../components/DelegationModal';
+import SourceLogo from '../components/SourceLogo';
 import useWebSocket from '../utils/useWebSocket';
 import { registerToastHandler, ToastContainer } from '../utils/toast';
 import {
-  MessageSquare,
-  Mail,
-  MessageCircle,
   Check,
   Clock,
   ExternalLink,
   Loader2,
   Users,
-  LayoutGrid,
   TrendingUp,
   Info,
   Lightbulb,
@@ -23,19 +20,10 @@ import {
   X
 } from 'lucide-react';
 
-const getSourceIcon = (source) => {
-  if (!source) return MessageSquare;
-  switch (source.toLowerCase()) {
-    case 'slack': return MessageCircle;
-    case 'gmail':
-    case 'email':
-    case 'outlook': return Mail;
-    case 'teams': return Users;
-    case 'whatsapp': return MessageCircle;
-    case 'jira': return LayoutGrid;
-    default: return MessageSquare;
-  }
-};
+// getSourceIcon() is gone: it mapped every service onto a generic lucide
+// glyph, so Gmail, email and Outlook all rendered the same envelope, and
+// Slack and WhatsApp the same speech bubble. SourceLogo resolves the real
+// brand mark instead.
 
 const PriorityGauge = ({ score }) => {
   const radius = 40;
@@ -104,7 +92,7 @@ const ActionableItem = ({ item, isSelected, onSelect, onToggleSelect, showCheckb
       )}
       <div className="item-header">
         <div className="item-source">
-          {React.createElement(getSourceIcon(item.source), { size: 14 })}
+          <SourceLogo source={item.source} size={14} />
           <span>{item.source}</span>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -167,7 +155,7 @@ const FocusPanel = ({ item, onArchive, onSnooze, onOpen, onDelegate, presence = 
       <div className="focus-header">
         <div className="focus-title-area">
           <div className="focus-source">
-            {React.createElement(getSourceIcon(item.source), { size: 16 })}
+            <SourceLogo source={item.source} size={16} />
             <span>{item.source}</span>
             {item.priorityTier && (
               <span className={`priority-tier ${item.priorityTier}`} style={{ marginLeft: '8px' }}>

@@ -1,3 +1,4 @@
+import SourceLogo from './SourceLogo';
 import { useState, useEffect } from 'react';
 import { X, Save, Trash2 } from 'lucide-react';
 
@@ -36,7 +37,7 @@ const IntegrationSettingsModal = ({ isOpen, onClose, integration, onSave, onDisc
               alignItems: 'center', 
               justifyContent: 'center' 
             }}>
-              <integration.icon size={20} color="var(--color-accent)" />
+              <SourceLogo source={integration.id} size={20} />
             </div>
             <h2 style={{ fontSize: '1.25rem' }}>{integration.name} Settings</h2>
           </div>
@@ -89,8 +90,9 @@ const IntegrationSettingsModal = ({ isOpen, onClose, integration, onSave, onDisc
                   padding: '10px', 
                   borderRadius: '8px', 
                   border: '1px solid var(--color-rule)',
-                  backgroundColor: 'white'
-                }} 
+                  backgroundColor: 'var(--surface-1)',
+                  color: 'var(--text-1)'
+                }}
                 value={settings.syncFrequency}
                 onChange={(e) => setSettings({...settings, syncFrequency: e.target.value})}
               >
