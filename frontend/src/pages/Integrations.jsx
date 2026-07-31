@@ -3,6 +3,7 @@ import api from '../utils/api';
 import IntegrationModal from '../components/IntegrationModal';
 import IntegrationSettingsModal from '../components/IntegrationSettingsModal';
 import SourceLogo from '../components/SourceLogo';
+import { INTEGRATION_METADATA } from '../constants/integrations';
 import {
   CheckCircle2,
   LayoutGrid,
@@ -114,17 +115,9 @@ const Integrations = () => {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [selectedIntegration, setSelectedIntegration] = useState(null);
 
-  // No `icon` field: SourceLogo resolves the real brand mark from the id.
-  // Previously every service carried a generic lucide glyph, which put the
-  // same icon on Gmail and Outlook, and on Slack and WhatsApp.
-  const metadata = {
-    gmail: { name: 'Gmail', description: 'Connect your personal or work Gmail account to prioritize emails.', account: 'john.doe@gmail.com' },
-    outlook: { name: 'Outlook', description: 'Sync your Microsoft Outlook inbox for unified communication.', account: 'work@company.com' },
-    slack: { name: 'Slack', description: 'Identify urgent messages and threads across all your Slack channels.', account: 'Team Slack' },
-    teams: { name: 'MS Teams', description: 'Collaborate and prioritize messages from Microsoft Teams.', account: 'Work Teams' },
-    whatsapp: { name: 'WhatsApp', description: 'Stay on top of your WhatsApp chats with AI-driven priority.', account: '+123456789' },
-    jira: { name: 'Jira', description: 'Track project updates and ticket priorities from Jira.', account: 'John Doe' },
-  };
+  // Shared with the landing page's integration strip, so the two can't drift.
+  // No `icon` field — SourceLogo resolves the real brand mark from the id.
+  const metadata = INTEGRATION_METADATA;
 
   const fetchIntegrations = async () => {
     try {

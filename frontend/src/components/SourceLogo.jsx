@@ -12,6 +12,9 @@ import { Mail, MessageSquare } from 'lucide-react';
  * brand's mark, which would be actively misleading.
  */
 
+// Matches the supported set in constants/integrations.js, which in turn
+// mirrors the backend's adapter map. Adding a service means: backend adapter,
+// that constants file, a logo in public/logos, and an entry here.
 const BRAND_LOGOS = {
   gmail: 'gmail',
   outlook: 'outlook',
@@ -21,7 +24,6 @@ const BRAND_LOGOS = {
   microsoftteams: 'teams',
   whatsapp: 'whatsapp',
   jira: 'jira',
-  linear: 'linear',
 };
 
 const SourceLogo = ({ source, size = 20, className = '' }) => {

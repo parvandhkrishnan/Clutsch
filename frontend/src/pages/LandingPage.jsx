@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import ThemeToggle from '../components/ThemeToggle';
 import LiquidButton from '../components/LiquidButton';
+import SourceLogo from '../components/SourceLogo';
+import { INTEGRATIONS } from '../constants/integrations';
 import { CheckCircle2, ArrowRight, Zap, Layers, Target, Shield } from 'lucide-react';
 
 const FeatureCard = ({ icon: Icon, title, description }) => (
@@ -16,11 +18,9 @@ const PricingCard = ({ tier, price, features, cta, isFree, onClick }) => (
   </div>
 );
 
-const IntegrationIcon = ({ src, label }) => (
+const IntegrationIcon = ({ id, label }) => (
   <div className="integration-chip">
-    {/* No border-radius on the mark itself — it was clipping the corners of
-        square logos. object-fit:contain stops any non-square mark squashing. */}
-    <img src={src} alt={`${label} logo`} width="20" height="20" loading="lazy" decoding="async" />
+    <SourceLogo source={id} size={20} />
     <span>{label}</span>
   </div>
 );
@@ -88,7 +88,11 @@ export default function LandingPage() {
       <section style={{ padding: '60px 0', textAlign: 'center' }}>
         <p className="text-caption" style={{ color: 'var(--color-ink-3)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, marginBottom: '24px' }}>Works with your favorite tools</p>
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px' }}>
-          <IntegrationIcon src="/logos/gmail.svg" label="Gmail" /><IntegrationIcon src="/logos/outlook.svg" label="Outlook" /><IntegrationIcon src="/logos/slack.svg" label="Slack" /><IntegrationIcon src="/logos/jira.svg" label="Jira" /><IntegrationIcon src="/logos/teams.svg" label="Teams" /><IntegrationIcon src="/logos/whatsapp.svg" label="WhatsApp" /><IntegrationIcon src="/logos/linear.svg" label="Linear" />
+          {/* Driven by the shared list so this strip can never advertise an
+              integration the product doesn't actually have. */}
+          {INTEGRATIONS.map(({ id, name }) => (
+            <IntegrationIcon key={id} id={id} label={name} />
+          ))}
         </div>
       </section>
 
